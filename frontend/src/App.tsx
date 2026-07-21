@@ -27,7 +27,7 @@ function App() {
     today: true,
     plus1: false,
     plus2: false,
-    plus7: false,
+    thisWeek: false,
   });
   const [showUnplaceableOnly, setShowUnplaceableOnly] = useState<boolean>(false);
 
@@ -109,7 +109,11 @@ function App() {
       if (dateFilters.today) activeDates.push(getDateOffsetString(0));
       if (dateFilters.plus1) activeDates.push(getDateOffsetString(1));
       if (dateFilters.plus2) activeDates.push(getDateOffsetString(2));
-      if (dateFilters.plus7) activeDates.push(getDateOffsetString(7));
+      if (dateFilters.thisWeek) {
+        for (let i = 0; i <= 7; i++) {
+          activeDates.push(getDateOffsetString(i));
+        }
+      }
 
       if (activeDates.length > 0) {
         const notamStart = new Date(props.start_utc).getTime();

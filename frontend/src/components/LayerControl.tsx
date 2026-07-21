@@ -21,7 +21,7 @@ interface LayerControlProps {
     today: boolean;
     plus1: boolean;
     plus2: boolean;
-    plus7: boolean;
+    thisWeek: boolean;
   };
   setDateFilters: React.Dispatch<React.SetStateAction<any>>;
   unplaceableCount: number;
@@ -157,7 +157,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
             checked={dateFilters.plus1} 
             onChange={() => toggleDateFilter('plus1')} 
           />
-          <span>Tomorrow (+1 Day)</span>
+          <span>Tomorrow</span>
         </label>
         <label className="layer-toggle">
           <input 
@@ -170,10 +170,10 @@ export const LayerControl: React.FC<LayerControlProps> = ({
         <label className="layer-toggle">
           <input 
             type="checkbox" 
-            checked={dateFilters.plus7} 
-            onChange={() => toggleDateFilter('plus7')} 
+            checked={dateFilters.thisWeek} 
+            onChange={() => toggleDateFilter('thisWeek')} 
           />
-          <span>Next Week (+7 Days)</span>
+          <span>This Week</span>
         </label>
       </div>
 

@@ -13,7 +13,7 @@ interface SidebarProps {
     today: boolean;
     plus1: boolean;
     plus2: boolean;
-    plus7: boolean;
+    thisWeek: boolean;
   };
   setDateFilters: React.Dispatch<React.SetStateAction<any>>;
   unplaceableNotams: any[];
