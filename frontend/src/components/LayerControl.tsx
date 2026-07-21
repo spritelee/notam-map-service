@@ -8,6 +8,10 @@ interface LayerControlProps {
     drone: boolean;
     fastJet: boolean;
     obstacle: boolean;
+    gpsJamming: boolean;
+    airspaceStatus: boolean;
+    lowLevelHazard: boolean;
+    groundServices: boolean;
     aerodrome: boolean;
     other: boolean;
     bgaTurnpoints: boolean;
@@ -90,6 +94,22 @@ export const LayerControl: React.FC<LayerControlProps> = ({
         <label className="layer-toggle gray">
           <input type="checkbox" checked={layers.obstacle} onChange={() => toggleLayer('obstacle')} />
           <span>🏗️ Masts & Cranes</span>
+        </label>
+        <label className="layer-toggle purple">
+          <input type="checkbox" checked={layers.gpsJamming} onChange={() => toggleLayer('gpsJamming')} />
+          <span>📡 GPS Jamming & RF Interference</span>
+        </label>
+        <label className="layer-toggle blue">
+          <input type="checkbox" checked={layers.airspaceStatus} onChange={() => toggleLayer('airspaceStatus')} />
+          <span>🛑 Airspace Status / ATZ / CTA</span>
+        </label>
+        <label className="layer-toggle red">
+          <input type="checkbox" checked={layers.lowLevelHazard} onChange={() => toggleLayer('lowLevelHazard')} />
+          <span>🎆 Low-level Warnings (Fireworks/Kites)</span>
+        </label>
+        <label className="layer-toggle green">
+          <input type="checkbox" checked={layers.groundServices} onChange={() => toggleLayer('groundServices')} />
+          <span>⛽ Ground Services & Fuel</span>
         </label>
         <label className="layer-toggle dark-gray">
           <input type="checkbox" checked={layers.aerodrome} onChange={() => toggleLayer('aerodrome')} />

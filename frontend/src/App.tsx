@@ -15,6 +15,10 @@ function App() {
     drone: true,
     fastJet: true,
     obstacle: true,
+    gpsJamming: true,
+    airspaceStatus: true,
+    lowLevelHazard: true,
+    groundServices: false,
     aerodrome: false,
     other: false,
     bgaTurnpoints: false
@@ -65,6 +69,10 @@ function App() {
     if (t === 'GLIDER_WINCH') return 'winch';
     if (t === 'PARACHUTE') return 'dropZone';
     if (t === 'UAS') return 'drone';
+    if (t === 'GPS_JAMMING') return 'gpsJamming';
+    if (t === 'AIRSPACE_STATUS') return 'airspaceStatus';
+    if (t === 'LOW_LEVEL_HAZARD') return 'lowLevelHazard';
+    if (t === 'GROUND_SERVICES') return 'groundServices';
     if (['MILITARY_EXERCISE', 'DANGER_AREA', 'RESTRICTED_AREA', 'PROHIBITED_AREA', 'OVERFLYING'].includes(t)) {
       return 'tda';
     }

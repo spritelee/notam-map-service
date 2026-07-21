@@ -28,6 +28,10 @@ const MapPanController = ({ selectedNotam }: { selectedNotam: any }) => {
 
 const getHazardIcon = (type: string) => {
   const t = (type || '').toUpperCase();
+  if (t === 'GPS_JAMMING') return '📡';
+  if (t === 'AIRSPACE_STATUS') return '🛑';
+  if (t === 'LOW_LEVEL_HAZARD') return '🎆';
+  if (t === 'GROUND_SERVICES') return '⛽';
   if (t.includes('WINCH') || t.includes('GLIDER')) return '🦅';
   if (t.includes('PARACHUTE') || t.includes('DROP')) return '🪂';
   if (t.includes('UAS') || t.includes('DRONE')) return '🛸';
@@ -39,6 +43,10 @@ const getHazardIcon = (type: string) => {
 
 const getHazardColor = (type: string) => {
   const t = (type || '').toUpperCase();
+  if (t === 'GPS_JAMMING') return '#d946ef'; // Magenta
+  if (t === 'AIRSPACE_STATUS') return '#2563eb'; // Blue
+  if (t === 'LOW_LEVEL_HAZARD') return '#f43f5e'; // Rose/Pink
+  if (t === 'GROUND_SERVICES') return '#10b981'; // Green
   if (t.includes('DANGER') || t.includes('RESTRICTED') || t.includes('TDA')) return '#ef4444'; // Red
   if (t.includes('PARACHUTE') || t.includes('DROP')) return '#f97316'; // Orange
   if (t.includes('WINCH') || t.includes('GLIDER')) return '#eab308'; // Yellow
