@@ -11,6 +11,7 @@ from shapely.geometry import shape, LineString, mapping
 
 from .services.pipeline import build_uk_geojson
 from .services.openair import geojson_to_openair
+from .services.sua import geojson_to_sua
 from .services.bga import get_bga_turnpoints
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,17 @@ async def export_openair(features: List[dict]):
     return PlainTextResponse(
         content=openair_content,
         headers={"Content-Disposition": "attachment; filename=notams.openair"}
+    )
+
+@app.post("/api/export/sua")
+async def export_sua(features: List[dict]):
+    """
+    Converts a list of filtered GeoJSON features into a valid SUA file.
+    """
+    sua_content = geojson_to_sua(features)
+    return PlainTextResponse(
+        content=sua_content,
+        headers={"Content-Disposition": "attachment; filename=notams.sua"}
     )
 
 # Static file serving for Vite Frontend Build

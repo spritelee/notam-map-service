@@ -305,6 +305,11 @@ body, html, #root {
   filter: brightness(1.15);
 }
 
+.action-btn.export-btn.secondary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
 /* --- MAP WORKSPACE & LEAFLET FIXES --- */
 .map-container {
   flex: 1;

@@ -169,6 +169,23 @@ function App() {
     .catch(err => console.error("Export failed", err));
   };
 
+  const exportSua = () => {
+    fetch('/api/export/sua', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filteredFeatures)
+    })
+    .then(res => res.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `UK_NOTAMs_FL${altitudeCeiling}.sua`;
+      a.click();
+    })
+    .catch(err => console.error("Export failed", err));
+  };
+
   return (
     <div className="app-container">
       <Sidebar 
@@ -186,6 +203,7 @@ function App() {
         totalNotamsCount={allNotams?.features?.length || 0}
         visibleNotamsCount={filteredFeatures.length}
         onExportOpenAir={exportOpenAir}
+        onExportSua={exportSua}
         showUnplaceableOnly={showUnplaceableOnly}
         setShowUnplaceableOnly={setShowUnplaceableOnly}
       />
