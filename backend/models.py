@@ -1,0 +1,17 @@
+from sqlalchemy import Column, String, DateTime, Text
+from geoalchemy2 import Geometry
+from .database import Base
+
+class Notam(Base):
+    __tablename__ = "notams"
+
+    id = Column(String, primary_key=True, index=True)
+    hazard_type = Column(String, index=True)
+    description = Column(Text)
+    altitude_limits = Column(String)
+    start_time = Column(DateTime, index=True)
+    end_time = Column(DateTime, index=True)
+    
+    # Store the parsed geographical footprint
+    # SRID 4326 is standard WGS84 (Longitude, Latitude)
+    geom = Column(Geometry(geometry_type='GEOMETRY', srid=4326))

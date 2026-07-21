@@ -1,0 +1,462 @@
+/* ==========================================================================
+   NOTAM Vision - Premium Flight Workstation Theme (Vanilla CSS)
+   ========================================================================== */
+
+:root {
+  --bg-dark: #12151c;
+  --panel-bg: rgba(22, 27, 36, 0.92);
+  --border-color: rgba(255, 255, 255, 0.14);
+  --text-main: #f0f4f8;
+  --text-muted: #94a3b8;
+  --accent-blue: #00d2ff;
+  --accent-red: #ff3344;
+  --accent-orange: #ff9900;
+  --accent-yellow: #ffcc00;
+  --accent-purple: #a855f7;
+  --accent-cyan: #00ffff;
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html, #root {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-stack);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+}
+
+/* --- SIDEBAR WORKBENCH --- */
+.sidebar {
+  width: 400px;
+  min-width: 400px;
+  height: 100%;
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(10, 14, 20, 0.7);
+}
+
+.sidebar-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+  padding: 4px 8px;
+  border-radius: 12px;
+  margin-top: 6px;
+}
+
+.live-status-pill .dot {
+  width: 6px;
+  height: 6px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* --- PANELS & SECTIONS --- */
+.panel-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* --- PERSONA BUTTONS --- */
+.persona-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.persona-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.persona-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.persona-btn.active {
+  background: rgba(0, 210, 255, 0.2);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* --- LAYER TOGGLES --- */
+.layer-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-toggle input {
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+}
+
+.altitude-slider {
+  width: 100%;
+  margin-top: 6px;
+  accent-color: var(--accent-blue);
+}
+
+/* --- UNPLACEABLE BADGE & DRAWER --- */
+.unplaceable-filter-btn {
+  width: 100%;
+  background: rgba(255, 153, 0, 0.15);
+  border: 1px solid var(--accent-orange);
+  color: var(--accent-orange);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.unplaceable-filter-btn:hover, .unplaceable-filter-btn.active {
+  background: var(--accent-orange);
+  color: #000;
+}
+
+.unplaceable-drawer {
+  background: rgba(255, 51, 68, 0.08);
+  border: 1px solid rgba(255, 51, 68, 0.3);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.unplaceable-header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.unplaceable-header h4 {
+  font-size: 13px;
+  color: var(--accent-red);
+}
+
+.unplaceable-header p {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.unplaceable-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.unplaceable-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.unplaceable-card:hover {
+  border-color: var(--accent-red);
+}
+
+.unplaceable-card.selected {
+  border-color: var(--accent-red);
+  background: rgba(255, 51, 68, 0.2);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.raw-text-snippet {
+  color: #cbd5e1;
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1.3;
+  max-height: 40px;
+  overflow: hidden;
+}
+
+.flags-badge {
+  color: var(--accent-yellow);
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+
+
+/* --- EXPORT BUTTON --- */
+.export-section {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.action-btn.export-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: none;
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.action-btn.export-btn:hover {
+  filter: brightness(1.15);
+}
+
+/* --- MAP WORKSPACE & LEAFLET FIXES --- */
+.map-container {
+  flex: 1;
+  height: 100%;
+  width: calc(100vw - 400px);
+  position: relative;
+}
+
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+  background-color: #12151c !important;
+}
+
+
+
+/* Custom Floating Hazard Pin Badges */
+.custom-hazard-pin-container {
+  background: none !important;
+  border: none !important;
+}
+
+.custom-hazard-pin {
+  width: 26px;
+  height: 26px;
+  background: rgba(18, 21, 28, 0.88);
+  border: 2px solid #38bdf8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.custom-hazard-pin:hover {
+  transform: scale(1.35);
+  z-index: 1000 !important;
+}
+
+.custom-hazard-pin.selected {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 14px #00d2ff;
+  transform: scale(1.4);
+}
+
+.pin-emoji {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 14, 20, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 210, 255, 0.2);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- LEAFLET CUSTOM POPUPS --- */
+.leaflet-popup {
+  min-width: 380px !important;
+  max-width: 550px !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #1e2430 !important;
+  color: #fff !important;
+  border: 1px solid var(--border-color);
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.popup-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent-blue);
+  margin-bottom: 4px;
+}
+
+.popup-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.popup-desc {
+  background: rgba(0,0,0,0.4);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+
+
+/* --- LEAFLET BGA TURNPOINTS STYLING --- */
+.bga-turnpoint-icon {
+  background: none !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center;
+  overflow: visible !important;
+}
+
+.bga-marker-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e; /* Vibrant green */
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+}
+
+.bga-marker-label {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  color: #22c55e;
+  text-shadow: 1px 1px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000;
+  margin-left: 4px;
+  white-space: nowrap;
+}
