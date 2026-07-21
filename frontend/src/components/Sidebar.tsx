@@ -22,6 +22,7 @@ interface SidebarProps {
   totalNotamsCount: number;
   visibleNotamsCount: number;
   onExportOpenAir: () => void;
+  onExportSua: () => void;
   showUnplaceableOnly: boolean;
   setShowUnplaceableOnly: (val: boolean) => void;
 }
@@ -41,13 +42,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   totalNotamsCount,
   visibleNotamsCount,
   onExportOpenAir,
+  onExportSua,
   showUnplaceableOnly,
   setShowUnplaceableOnly
 }) => {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h1>NOTAM Vision</h1>
+        <h1>NOTAM Map Service</h1>
         <div className="live-status-pill">
           <span className="dot"></span> NATS UK Live Feed ({visibleNotamsCount} / {totalNotamsCount})
         </div>
@@ -74,9 +76,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           selectedNotamId={selectedNotamId}
         />
 
-        <div className="export-section">
+        <div className="export-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button className="action-btn export-btn" onClick={onExportOpenAir}>
             📥 Download .openair (XCSoar / LX)
+          </button>
+          <button className="action-btn export-btn secondary" onClick={onExportSua}>
+            📥 Download .sua (ClearNav / Oudie)
           </button>
         </div>
       </div>
