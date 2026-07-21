@@ -79,10 +79,6 @@ export const LayerControl: React.FC<LayerControlProps> = ({
           <input type="checkbox" checked={layers.winch} onChange={() => toggleLayer('winch')} />
           <span>🦅 Gliding Operations (Winch/Airfields/Comps)</span>
         </label>
-        <label className="layer-toggle green">
-          <input type="checkbox" checked={layers.bgaTurnpoints} onChange={() => toggleLayer('bgaTurnpoints')} />
-          <span>🟢 BGA Glider Turnpoints</span>
-        </label>
         <label className="layer-toggle purple">
           <input type="checkbox" checked={layers.drone} onChange={() => toggleLayer('drone')} />
           <span>🛸 Drone / BVLOS Areas</span>
@@ -178,6 +174,16 @@ export const LayerControl: React.FC<LayerControlProps> = ({
             onChange={() => toggleDateFilter('plus7')} 
           />
           <span>Next Week (+7 Days)</span>
+        </label>
+      </div>
+
+      <div className="section-title" style={{ marginTop: '16px' }}>
+        <span>📍 Navigation References</span>
+      </div>
+      <div className="layer-grid">
+        <label className="layer-toggle green">
+          <input type="checkbox" checked={layers.bgaTurnpoints} onChange={() => toggleLayer('bgaTurnpoints')} />
+          <span>🟢 Show BGA Turnpoints (Official)</span>
         </label>
       </div>
 

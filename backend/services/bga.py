@@ -2,6 +2,8 @@ import re
 import csv
 import httpx
 import logging
+import zipfile
+import io
 
 logger = logging.getLogger("bga_service")
 
@@ -189,36 +191,66 @@ def parse_cup_file(content: str) -> list:
 
 async def get_bga_turnpoints() -> dict:
     """
-    Downloads the official BGA turnpoints list from soaringweb.org.
+    Downloads the official BGA turnpoints list from newportpeace.co.uk or loads a local cup file.
     Falls back gracefully to the pre-packaged static list if offline.
     """
-    target_urls = [
-        "https://soaringweb.org/TP/BGA/BGA_2025.cup",
-        "https://www.bookergliding.co.uk/crosscountry/bga2026a.cup"
-    ]
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 VFRNotamWorkstation/2.0"
-    }
-    
+    import os
     waypoints = []
-    
-    # Try fetching from URLs
-    async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-        for url in target_urls:
-            try:
-                logger.info(f"Attempting to download BGA turnpoints from: {url}")
-                response = await client.get(url, headers=headers)
-                if response.status_code == 200 and len(response.text) > 1000:
-                    parsed = parse_cup_file(response.text)
-                    if len(parsed) > 50:
-                        waypoints = parsed
-                        logger.info(f"Successfully loaded {len(waypoints)} turnpoints from {url}")
-                        break
-            except Exception as e:
-                logger.warning(f"Failed to fetch BGA turnpoints from {url}: {e}")
-                
-    # Fallback to local high-fidelity dataset if download failed
+
+    # Check for a local .cup file in the project root directory
+    try:
+        # __file__ is in backend/services/
+        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        local_cups = [f for f in os.listdir(root_dir) if f.lower().endswith(".cup")]
+        if local_cups:
+            local_path = os.path.join(root_dir, local_cups[0])
+            logger.info(f"Attempting to load local BGA turnpoints from: {local_path}")
+            with open(local_path, "r", encoding="latin1") as f:
+                parsed = parse_cup_file(f.read())
+                if len(parsed) > 50:
+                    waypoints = parsed
+                    logger.info(f"Successfully loaded {len(waypoints)} turnpoints from local file: {local_path}")
+    except Exception as e:
+        logger.warning(f"Error checking or parsing local .cup files: {e}")
+
+    # If no local turnpoints were loaded, try downloading from URLs
+    if not waypoints:
+        target_urls = [
+            "http://www.newportpeace.co.uk/waypoints/competition.zip",
+            "https://www.bookergliding.co.uk/crosscountry/bga2026a.cup"
+        ]
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 VFRNotamWorkstation/2.0"
+        }
+        
+        # Try fetching from URLs
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            for url in target_urls:
+                try:
+                    logger.info(f"Attempting to download BGA turnpoints from: {url}")
+                    response = await client.get(url, headers=headers)
+                    if response.status_code == 200:
+                        if url.endswith(".zip"):
+                            # Extract COMPETITION.CUP from zip
+                            zip_file = zipfile.ZipFile(io.BytesIO(response.content))
+                            cup_filename = next((name for name in zip_file.namelist() if name.lower().endswith(".cup")), None)
+                            if cup_filename:
+                                cup_text = zip_file.read(cup_filename).decode('latin1')
+                                parsed = parse_cup_file(cup_text)
+                            else:
+                                parsed = []
+                        else:
+                            parsed = parse_cup_file(response.text)
+                            
+                        if len(parsed) > 50:
+                            waypoints = parsed
+                            logger.info(f"Successfully loaded {len(waypoints)} turnpoints from {url}")
+                            break
+                except Exception as e:
+                    logger.warning(f"Failed to fetch BGA turnpoints from {url}: {e}")
+                    
+    # Fallback to local high-fidelity dataset if both local file and downloads failed
     if not waypoints:
         logger.info(f"Using pre-packaged BGA fallback dataset ({len(BGA_WAYPOINTS_FALLBACK)} items).")
         waypoints = BGA_WAYPOINTS_FALLBACK
