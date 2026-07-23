@@ -82,6 +82,11 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
       if (nextZones.length > 1) {
         nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Line', radius: 1000 };
       }
+      for (let i = 1; i < nextZones.length - 1; i++) {
+        if (nextZones[i].type === 'Line') {
+          nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 2000, angle: 90 };
+        }
+      }
       return nextZones;
     });
   };
@@ -114,7 +119,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
       // Re-evaluate any middle point that might have been a start/finish
       for (let i = 1; i < nextZones.length - 1; i++) {
         if (nextZones[i].type === 'Line') {
-          nextZones[i] = { ...nextZones[i], type: 'Cylinder', radius: 500 };
+          nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 2000, angle: 90 };
         }
       }
       return nextZones;
@@ -275,7 +280,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                                 next[index] = {
                                   ...next[index],
                                   type: newType,
-                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Sector' ? 20000 : 500)
+                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Sector' ? 2000 : (newType === 'Keyhole' ? 10000 : 500))
                                 };
                                 return next;
                               });
@@ -290,20 +295,20 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                         </div>
 
                         <div style={{ width: '85px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          <label style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'left' }}>Radius (m)</label>
+                          <label style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'left' }}>Radius (km)</label>
                           <input
                             type="number"
-                            min="100"
-                            max="100000"
-                            step="100"
-                            value={observationZones[index]?.radius || 500}
+                            min="0.1"
+                            max="100"
+                            step="0.1"
+                            value={((observationZones[index]?.radius || 500) / 1000).toString()}
                             onChange={(e) => {
-                              const newRadius = parseInt(e.target.value) || 100;
+                              const newRadiusKm = parseFloat(e.target.value) || 0.1;
                               setObservationZones(prev => {
                                 const next = [...prev];
                                 next[index] = {
                                   ...next[index],
-                                  radius: newRadius
+                                  radius: Math.round(newRadiusKm * 1000)
                                 };
                                 return next;
                               });

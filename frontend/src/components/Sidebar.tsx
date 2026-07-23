@@ -114,8 +114,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className={`sidebar ${isMobile ? 'mobile-drawer' : ''} ${isMobileSidebarOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1>NOTAM Map Service</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="brand-container">
+            <img src="/favicon.png" alt="NOTAM Map Logo" className="header-logo" />
+            <h1>NOTAM Map Service</h1>
+          </div>
           {isMobile && (
             <button 
               className="close-drawer-btn" 

@@ -431,35 +431,12 @@ export const NotamMap: React.FC<NotamMapProps> = ({
           
           if (type === 'Sector' || type === 'Keyhole') {
             let heading = 0;
-            if (idx > 0 && idx < waypoints.length - 1) {
+            if (idx > 0) {
               const prev = waypoints[idx - 1];
-              const next = waypoints[idx + 1];
-              
-              const dy1 = pos[0] - prev[0];
-              const dx1 = pos[1] - prev[1];
-              const len1 = Math.hypot(dy1, dx1) || 1;
-              const ny1 = dy1 / len1;
-              const nx1 = dx1 / len1;
-
-              const dy2 = next[0] - pos[0];
-              const dx2 = next[1] - pos[1];
-              const len2 = Math.hypot(dy2, dx2) || 1;
-              const ny2 = dy2 / len2;
-              const nx2 = dx2 / len2;
-
-              let by = -(ny1 + ny2);
-              let bx = -(nx1 + nx2);
-              if (Math.hypot(by, bx) < 0.001) {
-                by = -nx1;
-                bx = ny1;
-              }
-              heading = Math.atan2(bx, by);
+              heading = Math.atan2(pos[1] - prev[1], pos[0] - prev[0]);
             } else if (idx === 0 && waypoints.length > 1) {
               const next = waypoints[1];
               heading = Math.atan2(pos[1] - next[1], pos[0] - next[0]);
-            } else if (idx === waypoints.length - 1 && waypoints.length > 1) {
-              const prev = waypoints[waypoints.length - 2];
-              heading = Math.atan2(pos[1] - prev[1], pos[0] - prev[0]);
             }
             
             const cosLat = Math.cos((pos[0] * Math.PI) / 180);

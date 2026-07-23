@@ -134,8 +134,8 @@ function App() {
         const prevFinishIdx = nextZones.length - 1;
         if (prevFinishIdx > 0) { // i.e. it's not the start point
           nextZones[prevFinishIdx] = {
-            type: 'Cylinder',
-            radius: 500,
+            type: 'Sector',
+            radius: 2000,
             angle: 90
           };
         }
@@ -544,6 +544,7 @@ function App() {
 
       {isLoading && (
         <div className="loading-overlay">
+          <img src="/notam-icon.png" alt="NOTAM Map Logo" className="loading-logo" />
           <div className="spinner"></div>
           <p>Loading current NOTAMs...</p>
         </div>
