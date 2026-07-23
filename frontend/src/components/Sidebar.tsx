@@ -52,6 +52,9 @@ interface SidebarProps {
   // Map Engine Switcher Props
   mapEngine: 'leaflet' | 'maplibre';
   setMapEngine: (engine: 'leaflet' | 'maplibre') => void;
+
+  // Feed Staleness Metadata
+  notamMeta?: { fetched_at?: string; feed_degraded?: boolean } | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -92,9 +95,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   onOpenGuide,
   mapEngine,
-  setMapEngine
+  setMapEngine,
+  notamMeta
 }) => {
   const [activeTab, setActiveTab] = useState<'filters' | 'route' | 'unplaceable'>('filters');
+
+  const formatDataAsOf = (isoString?: string) => {
+    if (!isoString) return null;
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return null;
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      return `${hh}:${mm} UTC`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const dataAsOfStr = formatDataAsOf(notamMeta?.fetched_at);
 
   // Helper to render the export buttons panel
   const renderExportSection = (isCompact = false) => (
@@ -162,9 +181,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
-          <div className="live-status-pill" style={{ marginTop: 0 }}>
-            <span className="dot"></span> UK Aeronautical Feed ({visibleNotamsCount} / {totalNotamsCount})
+          <div className={`live-status-pill ${notamMeta?.feed_degraded ? 'degraded' : ''}`} style={{ marginTop: 0 }}>
+            <span className={`dot ${notamMeta?.feed_degraded ? 'degraded-dot' : ''}`}></span>
+            {notamMeta?.feed_degraded ? '⚠️ Feed Degraded' : 'UK Aeronautical Feed'} ({visibleNotamsCount} / {totalNotamsCount})
           </div>
+          {dataAsOfStr && (
+            <div className="data-as-of-pill" title="Timestamp of ingested NATS NOTAM feed cache">
+              🕒 Data as of {dataAsOfStr}
+            </div>
+          )}
           <button className="user-guide-link-btn" onClick={onOpenGuide} title="View Workstation User Guide">
             📖 Guide
           </button>

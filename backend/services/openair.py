@@ -2,7 +2,7 @@
 OpenAir format serializer for XCSoar, LX Navigation, and SeeYou.
 Transforms GeoJSON NOTAM FeatureCollections into valid OpenAir airspace blocks.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import datetime
 
 
@@ -24,7 +24,11 @@ def _deg_to_dms(deg: float, is_lat: bool) -> str:
         s = int(round(((deg - d) * 60 - m) * 60))
         return f"{d:03d}:{m:02d}:{s:02d} {direction}"
 
-def geojson_to_openair(features: List[Dict[str, Any]]) -> str:
+def _header_line(text: str, width: int = 75) -> str:
+    inner = width - 4
+    return f"* {text:<{inner}} *"
+
+def geojson_to_openair(features: List[Dict[str, Any]], meta: Optional[Dict[str, Any]] = None) -> str:
     """Generates an OpenAir string from a list of GeoJSON features."""
     now = datetime.datetime.now(datetime.timezone.utc)
     gen_time_str = now.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -43,13 +47,32 @@ def geojson_to_openair(features: List[Dict[str, Any]]) -> str:
                 
     valid_until_str = valid_until.strftime("%Y-%m-%d %H:%M:%S UTC") if valid_until else "Unknown / Permanent"
     
+    data_as_of_str = "Unknown"
+    feed_degraded = False
+    if meta:
+        fetched_at = meta.get("fetched_at")
+        if fetched_at:
+            try:
+                dt_fetch = datetime.datetime.fromisoformat(fetched_at.replace("Z", "+00:00"))
+                data_as_of_str = dt_fetch.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except Exception:
+                data_as_of_str = str(fetched_at)
+        feed_degraded = bool(meta.get("feed_degraded", False))
+
+    status_str = "DEGRADED (STALE CACHE)" if feed_degraded else "LIVE FEED OK"
+    
     width = 75
     lines = [
         "*" * width,
-        f"* UK NOTAM OpenAir Airspace File - Generated for VFR / Gliders{' ':<11} *",
-        f"* Tool: UK NOTAM Flight Workstation (https://notam.leestimmel.net){' ':<11} *",
-        f"* Generated At: {gen_time_str:<56} *",
-        f"* Valid Until:  {valid_until_str:<56} *",
+        _header_line("UK NOTAM OpenAir Airspace File - Generated for VFR / Gliders"),
+        _header_line("Tool: UK NOTAM Flight Workstation (https://notam.leestimmel.net)"),
+        _header_line(f"Generated At: {gen_time_str}"),
+        _header_line(f"Valid Until:  {valid_until_str}"),
+        _header_line(f"Data as of:   {data_as_of_str}"),
+        _header_line(f"Feed Status:  {status_str}"),
+        "*" * width,
+        _header_line("WARNING: NOT FOR OPERATIONAL OR SINGLE-SOURCE NAVIGATION."),
+        _header_line("ALWAYS VERIFY AGAINST OFFICIAL NATS AIS BEFORE FLIGHT."),
         "*" * width,
         ""
     ]

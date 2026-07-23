@@ -95,3 +95,10 @@ def test_features_carry_vertical_band(notams):
 def test_json_serialisable(notams):
     import json
     json.dumps(notams_to_geojson(notams, persona=qcodes.GLIDER, max_altitude_ft=10000))
+
+
+def test_meta_staleness_fields(notams):
+    fc = notams_to_geojson(notams[:5])
+    assert "fetched_at" in fc["meta"]
+    assert fc["meta"]["feed_degraded"] is False
+

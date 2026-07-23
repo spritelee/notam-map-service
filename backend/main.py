@@ -7,7 +7,7 @@ import datetime
 import random
 import string
 import httpx
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, Query, HTTPException, Response, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -56,7 +56,6 @@ class TaskShareRequest(BaseModel):
 class WeGlideSyncRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
     weglide_api_key: str
-    pilot_dob: Optional[str] = None
     task_name: Optional[str] = Field("NOTAM Workstation Task", max_length=100)
     mock: bool = False
 
@@ -217,6 +216,7 @@ async def filter_by_route(req: RouteRequest):
             
     corridor_geojson = mapping(corridor_polygon)
     
+    cache_meta = CACHE["data"].get("meta", {}) if CACHE.get("data") else {}
     return {
         "type": "FeatureCollection",
         "features": intersecting_features + unplaceable_features,
@@ -225,19 +225,22 @@ async def filter_by_route(req: RouteRequest):
             "total_route_hazards": len(intersecting_features),
             "unplaceable_notices": len(unplaceable_features),
             "corridor_nm": req.corridor_nm,
-            "waypoints_count": len(req.waypoints)
+            "waypoints_count": len(req.waypoints),
+            "fetched_at": cache_meta.get("fetched_at"),
+            "feed_degraded": cache_meta.get("feed_degraded", False),
         }
     }
 
 class ExportRequest(BaseModel):
     features: List[dict] = Field(..., max_length=2000)
+    meta: Optional[Dict[str, Any]] = None
 
 @app.post("/api/export/openair", dependencies=[Depends(rate_limit(30, 60))])
 async def export_openair(req: ExportRequest):
     """
     Converts a list of filtered GeoJSON features into a valid OpenAir file for XCSoar / LX.
     """
-    openair_content = geojson_to_openair(req.features)
+    openair_content = geojson_to_openair(req.features, meta=req.meta)
     return PlainTextResponse(
         content=openair_content,
         headers={"Content-Disposition": "attachment; filename=notams.openair"}
@@ -248,7 +251,7 @@ async def export_sua(req: ExportRequest):
     """
     Converts a list of filtered GeoJSON features into a valid SUA file.
     """
-    sua_content = geojson_to_sua(req.features)
+    sua_content = geojson_to_sua(req.features, meta=req.meta)
     return PlainTextResponse(
         content=sua_content,
         headers={"Content-Disposition": "attachment; filename=notams.sua"}

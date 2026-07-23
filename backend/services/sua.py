@@ -2,7 +2,7 @@
 Tim Newport-Peace (TNP) SUA format serializer for XCSoar, Oudie, and LX Navigation.
 Transforms GeoJSON NOTAM FeatureCollections into valid .sua airspace blocks.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import datetime
 
 
@@ -37,7 +37,7 @@ def _deg_to_sua_dms(deg: float, is_lat: bool) -> str:
             d += 1
         return f"{direction}{d:03d}{m:02d}{s:02d}"
 
-def geojson_to_sua(features: List[Dict[str, Any]]) -> str:
+def geojson_to_sua(features: List[Dict[str, Any]], meta: Optional[Dict[str, Any]] = None) -> str:
     """Generates a Tim Newport-Peace SUA string from a list of GeoJSON features."""
     now = datetime.datetime.now(datetime.timezone.utc)
     gen_time_str = now.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -55,11 +55,29 @@ def geojson_to_sua(features: List[Dict[str, Any]]) -> str:
                 
     valid_until_str = valid_until.strftime("%Y-%m-%d %H:%M:%S UTC") if valid_until else "Unknown / Permanent"
     
+    data_as_of_str = "Unknown"
+    feed_degraded = False
+    if meta:
+        fetched_at = meta.get("fetched_at")
+        if fetched_at:
+            try:
+                dt_fetch = datetime.datetime.fromisoformat(fetched_at.replace("Z", "+00:00"))
+                data_as_of_str = dt_fetch.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except Exception:
+                data_as_of_str = str(fetched_at)
+        feed_degraded = bool(meta.get("feed_degraded", False))
+
+    status_str = "DEGRADED (STALE CACHE)" if feed_degraded else "LIVE FEED OK"
+    
     lines = [
         "* UK NOTAM SUA Airspace File - Generated for VFR / Gliders",
-        f"* Tool: UK NOTAM Flight Workstation (https://notam.leestimmel.net)",
+        "* Tool: UK NOTAM Flight Workstation (https://notam.leestimmel.net)",
         f"* Generated At: {gen_time_str}",
-        f"* Valid Until: {valid_until_str}",
+        f"* Valid Until:  {valid_until_str}",
+        f"* Data as of:   {data_as_of_str}",
+        f"* Feed Status:  {status_str}",
+        "* WARNING: NOT FOR OPERATIONAL OR SINGLE-SOURCE NAVIGATION.",
+        "* ALWAYS VERIFY AGAINST OFFICIAL NATS AIS BEFORE FLIGHT.",
         ""
     ]
 

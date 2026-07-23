@@ -195,7 +195,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
             checked={bgaTurnpointsActive || false} 
             onChange={onToggleBgaTurnpoints} 
           />
-          <span>🟢 Show BGA Turnpoints (Official)</span>
+          <span>🟢 Show BGA Turnpoints (April 2026 rev A)</span>
         </label>
       </div>
 

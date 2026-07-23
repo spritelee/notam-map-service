@@ -65,6 +65,8 @@ function App() {
   });
   const [showUnplaceableOnly, setShowUnplaceableOnly] = useState<boolean>(false);
 
+  const [notamMeta, setNotamMeta] = useState<{ fetched_at?: string; feed_degraded?: boolean } | null>(null);
+
   const [selectedNotam, setSelectedNotam] = useState<any>(null);
   const [panToNotam, setPanToNotam] = useState<any>(null);
 
@@ -86,6 +88,9 @@ function App() {
       .then(res => res.json())
       .then(data => {
         setAllNotams(data);
+        if (data?.meta) {
+          setNotamMeta(data.meta);
+        }
         setIsLoading(false);
       })
       .catch(err => {
@@ -121,6 +126,9 @@ function App() {
       .then(res => res.json())
       .then(data => {
         setCorridorResult(data);
+        if (data?.meta) {
+          setNotamMeta(prev => ({ ...prev, ...data.meta }));
+        }
       })
       .catch(err => console.error("Corridor filter failed", err));
     } else {
@@ -341,7 +349,7 @@ function App() {
     fetch('/api/export/openair', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features: exportFeatures })
+      body: JSON.stringify({ features: exportFeatures, meta: notamMeta })
     })
     .then(res => res.blob())
     .then(blob => {
@@ -359,7 +367,7 @@ function App() {
     fetch('/api/export/sua', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features: exportFeatures })
+      body: JSON.stringify({ features: exportFeatures, meta: notamMeta })
     })
     .then(res => res.blob())
     .then(blob => {
@@ -417,6 +425,19 @@ function App() {
     }
   };
 
+  const formatDataAsOf = (isoString?: string) => {
+    if (!isoString) return null;
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return null;
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      return `${hh}:${mm} UTC`;
+    } catch (e) {
+      return null;
+    }
+  };
+
   const handleSelectNotamFromMap = (notam: any) => {
     setSelectedNotam(notam);
     setPanToNotam(null);
@@ -424,6 +445,17 @@ function App() {
 
   return (
     <div className={`app-container ${isMobile ? 'is-mobile' : ''} ${isMobileSidebarOpen ? 'mobile-sidebar-open' : ''}`}>
+      {notamMeta?.feed_degraded && (
+        <div className="degraded-feed-banner" role="alert">
+          <div className="degraded-banner-content">
+            <span className="degraded-icon">⚠️</span>
+            <span>
+              <strong>DEGRADED FEED WARNING:</strong> Live NATS NOTAM update failed. Displaying cached data as of <strong>{formatDataAsOf(notamMeta.fetched_at) || 'previous fetch'}</strong>. Short-notice NOTAMs may be missing. Verify against official NATS AIS before flight.
+            </span>
+          </div>
+        </div>
+      )}
+
       <Sidebar 
         layers={layers}
         setLayers={setLayers}
@@ -467,6 +499,9 @@ function App() {
         // Map Engine Switcher Props
         mapEngine={mapEngine}
         setMapEngine={handleSetMapEngine}
+
+        // Staleness metadata
+        notamMeta={notamMeta}
       />
 
       {mapEngine === 'maplibre' ? (

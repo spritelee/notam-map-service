@@ -71,6 +71,7 @@ def notams_to_geojson(
     unplaceable = sum(1 for f in feats if f["properties"]["geometry_source"] == "unplaceable")
     for f in feats:
         del f["_band"]  # strip internal helper before returning
+    import datetime as dt
     return {
         "type": "FeatureCollection",
         "features": feats,
@@ -80,6 +81,8 @@ def notams_to_geojson(
             "persona": persona,
             "max_altitude_ft": max_altitude_ft,
             "min_altitude_ft": min_altitude_ft,
+            "fetched_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "feed_degraded": False,
         },
     }
 

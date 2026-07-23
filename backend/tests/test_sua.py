@@ -41,3 +41,16 @@ def test_geojson_to_sua_polygon():
     assert "POINT=N511800 W0010900" in sua_content
     assert "POINT=N511912 W0010600" in sua_content
     assert "POINT=N511648 W0010448" in sua_content
+    assert "ALWAYS VERIFY AGAINST OFFICIAL NATS AIS BEFORE FLIGHT." in sua_content
+    assert "Generated At:" in sua_content
+    assert "Valid Until:" in sua_content
+
+
+def test_geojson_to_sua_meta():
+    features = []
+    meta = {"fetched_at": "2026-07-24T00:10:00Z", "feed_degraded": True}
+    sua_content = geojson_to_sua(features, meta=meta)
+    assert "Data as of:   2026-07-24 00:10:00 UTC" in sua_content
+    assert "Feed Status:  DEGRADED (STALE CACHE)" in sua_content
+    assert "ALWAYS VERIFY AGAINST OFFICIAL NATS AIS BEFORE FLIGHT." in sua_content
+

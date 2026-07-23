@@ -21,7 +21,6 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
 
   // WeGlide State
   const [weglideKey, setWeglideKey] = useState<string>('');
-  const [pilotDob, setPilotDob] = useState<string>('');
   const [taskName, setTaskName] = useState<string>('');
   const [isNameEdited, setIsNameEdited] = useState<boolean>(false);
   const [weglideMock, setWeglideMock] = useState<boolean>(true);
@@ -76,12 +75,10 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
   // Load saved configuration from localStorage
   useEffect(() => {
     const savedWeglideKey = localStorage.getItem('notam_weglide_key');
-    const savedPilotDob = localStorage.getItem('notam_pilot_dob');
     const savedProvider = localStorage.getItem('notam_cloud_provider');
     const savedToken = localStorage.getItem('notam_cloud_token');
 
     if (savedWeglideKey) setWeglideKey(savedWeglideKey);
-    if (savedPilotDob) setPilotDob(savedPilotDob);
     if (savedProvider) setProvider(savedProvider as any);
     if (savedToken) setAccessToken(savedToken);
   }, []);
@@ -97,7 +94,6 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
 
     // Persist keys for convenience
     if (weglideKey) localStorage.setItem('notam_weglide_key', weglideKey);
-    if (pilotDob) localStorage.setItem('notam_pilot_dob', pilotDob);
 
     const lngLatWaypoints = waypoints.map(wp => [wp[1], wp[0]]);
 
@@ -108,7 +104,6 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
         body: JSON.stringify({
           waypoints: lngLatWaypoints,
           weglide_api_key: weglideKey || 'MOCK_KEY_12345',
-          pilot_dob: pilotDob || null,
           task_name: taskName,
           mock: weglideMock
         })
