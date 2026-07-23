@@ -87,6 +87,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+RATE_LIMIT_CACHE = {}
+
+def rate_limit(requests_limit: int, window_seconds: int):
+    async def dependency(request: Request):
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.client.host
+        
+        now = time.time()
+        timestamps = RATE_LIMIT_CACHE.get(ip, [])
+        timestamps = [t for t in timestamps if now - t < window_seconds]
+        
+        if len(timestamps) >= requests_limit:
+            RATE_LIMIT_CACHE[ip] = timestamps
+            raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+            
+        timestamps.append(now)
+        RATE_LIMIT_CACHE[ip] = timestamps
+    return dependency
+
 # In-memory cache for live UK NOTAM GeoJSON and BGA Turnpoints
 CACHE = {
     "data": None,
@@ -158,7 +177,7 @@ async def get_bga_points():
         BGA_CACHE["timestamp"] = time.time()
     return BGA_CACHE["data"]
 
-@app.post("/api/route/filter")
+@app.post("/api/route/filter", dependencies=[Depends(rate_limit(60, 60))])
 async def filter_by_route(req: RouteRequest):
     """
     Performs spatial corridor buffering around a route and returns all intersecting NOTAMs.
@@ -452,7 +471,7 @@ def generate_share_id() -> str:
     chars = string.ascii_letters + string.digits
     return "".join(random.choice(chars) for _ in range(8))
 
-@app.post("/api/task/share")
+@app.post("/api/task/share", dependencies=[Depends(rate_limit(10, 60))])
 async def share_task(req: TaskShareRequest):
     for _ in range(10):
         share_id = generate_share_id()
@@ -463,6 +482,7 @@ async def share_task(req: TaskShareRequest):
     else:
         raise HTTPException(status_code=500, detail="Failed to generate a unique share ID.")
 
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
     await doc_ref.set({
         "id": share_id,
         "waypoints": json.dumps(req.waypoints),
@@ -470,7 +490,8 @@ async def share_task(req: TaskShareRequest):
         "observation_zones": json.dumps([oz.model_dump() for oz in req.observation_zones]) if req.observation_zones else None,
         "is_aat": req.is_aat,
         "is_pev": req.is_pev,
-        "created_at": firestore.SERVER_TIMESTAMP
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "expires_at": expires_at
     })
     
     return {
@@ -493,7 +514,8 @@ async def get_shared_task(share_id: str):
         "observation_zones": json.loads(shared.get("observation_zones")) if shared.get("observation_zones") else None,
         "is_aat": shared.get("is_aat", False),
         "is_pev": shared.get("is_pev", False),
-        "created_at": shared["created_at"].isoformat() if hasattr(shared["created_at"], "isoformat") else str(shared["created_at"])
+        "created_at": shared["created_at"].isoformat() if hasattr(shared["created_at"], "isoformat") else str(shared["created_at"]),
+        "expires_at": shared["expires_at"].isoformat() if hasattr(shared.get("expires_at"), "isoformat") else str(shared.get("expires_at")) if shared.get("expires_at") else None
     }
 
 @app.get("/api/task/share/{share_id}/cup")
@@ -614,7 +636,7 @@ async def get_shared_task_openair(share_id: str):
         headers={"Content-Disposition": f"attachment; filename=notams_{share_id}.openair"}
     )
 
-@app.post("/api/sync/weglide")
+@app.post("/api/sync/weglide", dependencies=[Depends(rate_limit(10, 60))])
 async def sync_weglide(req: WeGlideSyncRequest):
     if len(req.waypoints) < 2:
         raise HTTPException(status_code=400, detail="At least 2 waypoints are required to declare a task.")
@@ -682,7 +704,7 @@ async def sync_weglide(req: WeGlideSyncRequest):
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Error connecting to WeGlide API: {str(e)}")
 
-@app.post("/api/sync/cloud-drive")
+@app.post("/api/sync/cloud-drive", dependencies=[Depends(rate_limit(10, 60))])
 async def sync_cloud_drive(req: CloudDriveSyncRequest):
     if len(req.waypoints) < 2:
         raise HTTPException(status_code=400, detail="At least 2 waypoints are required to sync.")
