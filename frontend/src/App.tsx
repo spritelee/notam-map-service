@@ -325,7 +325,7 @@ function App() {
     fetch('/api/export/openair', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(exportFeatures)
+      body: JSON.stringify({ features: exportFeatures })
     })
     .then(res => res.blob())
     .then(blob => {
@@ -343,7 +343,7 @@ function App() {
     fetch('/api/export/sua', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(exportFeatures)
+      body: JSON.stringify({ features: exportFeatures })
     })
     .then(res => res.blob())
     .then(blob => {

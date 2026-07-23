@@ -42,14 +42,14 @@ async def startup_event():
 
 # Pydantic models for Sync & Share
 class ObservationZoneConfig(BaseModel):
-    type: str  # "Cylinder", "Sector", "Line", "Keyhole"
-    radius: float  # in meters
-    angle: Optional[float] = 90.0
+    type: str = Field(..., pattern="^(Cylinder|Sector|Line|Keyhole)$")  # Lock down types
+    radius: float = Field(..., ge=0.0, le=100000.0)  # Max 100km, no negative radius
+    angle: Optional[float] = Field(90.0, ge=0.0, le=360.0)  # Standard degrees
 
 class TaskShareRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
     corridor_nm: float = Field(20.0, le=100.0)
-    observation_zones: Optional[List[ObservationZoneConfig]] = None
+    observation_zones: Optional[List[ObservationZoneConfig]] = Field(None, max_length=50)
 
 class WeGlideSyncRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
@@ -63,15 +63,21 @@ class CloudDriveSyncRequest(BaseModel):
     corridor_nm: float = Field(20.0, le=100.0)
     provider: str # "google_drive" or "dropbox"
     access_token: str
-    observation_zones: Optional[List[ObservationZoneConfig]] = None
+    observation_zones: Optional[List[ObservationZoneConfig]] = Field(None, max_length=50)
     mock: bool = False
 
 
 
-# Tightened CORS origins
+# Tightened CORS origins (removed wildcard to prevent credential leakage and proxy abuse)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8080", "http://127.0.0.1:8080", "*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "https://notam.leestimmel.net"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -198,23 +204,26 @@ async def filter_by_route(req: RouteRequest):
         }
     }
 
+class ExportRequest(BaseModel):
+    features: List[dict] = Field(..., max_length=2000)
+
 @app.post("/api/export/openair")
-async def export_openair(features: List[dict]):
+async def export_openair(req: ExportRequest):
     """
     Converts a list of filtered GeoJSON features into a valid OpenAir file for XCSoar / LX.
     """
-    openair_content = geojson_to_openair(features)
+    openair_content = geojson_to_openair(req.features)
     return PlainTextResponse(
         content=openair_content,
         headers={"Content-Disposition": "attachment; filename=notams.openair"}
     )
 
 @app.post("/api/export/sua")
-async def export_sua(features: List[dict]):
+async def export_sua(req: ExportRequest):
     """
     Converts a list of filtered GeoJSON features into a valid SUA file.
     """
-    sua_content = geojson_to_sua(features)
+    sua_content = geojson_to_sua(req.features)
     return PlainTextResponse(
         content=sua_content,
         headers={"Content-Disposition": "attachment; filename=notams.sua"}

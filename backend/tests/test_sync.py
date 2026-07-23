@@ -1,7 +1,8 @@
-import sys
 from unittest.mock import MagicMock
+import pytest
+from fastapi.testclient import TestClient
 
-# Mock google.cloud and google.cloud.firestore to bypass ADC requirements
+# Mock firestore to bypass ADC requirements during unit tests
 test_docs = {}
 
 class MockDoc:
@@ -35,15 +36,11 @@ mock_firestore_module = MagicMock()
 mock_firestore_module.AsyncClient = MockFirestoreClient
 mock_firestore_module.SERVER_TIMESTAMP = "mock_timestamp"
 
-mock_google_cloud = MagicMock()
-mock_google_cloud.firestore = mock_firestore_module
+# Patch backend.main.firestore directly because it may have been loaded in other tests
+import backend.main
+backend.main.firestore = mock_firestore_module
 
-sys.modules['google.cloud'] = mock_google_cloud
-sys.modules['google.cloud.firestore'] = mock_firestore_module
-
-# Now we can import the app and other components
-import pytest
-from fastapi.testclient import TestClient
+# Now import app safely
 from backend.main import app, generate_cup_task, generate_tsk_task
 
 @pytest.fixture
