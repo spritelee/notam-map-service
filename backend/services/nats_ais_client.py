@@ -3,7 +3,7 @@ NATS AIS (UK) NOTAM ingestion.
 
 Source: the UK Pre-flight Information Bulletin (PIB) published by NATS via the Eurocontrol
 EAD contingency system as a single XML file containing every UK NOTAM valid now and within
-the next 7 days. It is free and unauthenticated. See IMPLEMENTATION_PLAN.md sec. 7a.
+the next 7 days. It is free and unauthenticated.
 
 Why this source and not the FAA/SkyLink feed: the FAA only redistributes international NOTAMs
 that are flagged for international dissemination, which silently omits local UK glider hazards

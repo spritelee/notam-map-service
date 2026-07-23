@@ -1,7 +1,7 @@
 """
 Deterministic geometry tools for NOTAM parsing.
 
-Design principle (see IMPLEMENTATION_PLAN.md): the LLM never computes coordinates.
+Design principle: the LLM never computes coordinates.
 It may *identify* which tokens in the free text are coordinates or a route, but every
 number that ends up on the map is produced by the tested, deterministic functions here.
 

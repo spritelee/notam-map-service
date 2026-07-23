@@ -17,7 +17,7 @@ low-level pilots) and a drone *operator* (not an audience for a flight-planning 
 
 Reference: ICAO Doc 8126 / Annex 15 NOTAM Q-code Subject (2nd-3rd letters). This is a pragmatic
 subset covering the common UK-FIR subjects. Persona relevance here is hazard-subject based; a
-later refinement layers altitude bands on top (see IMPLEMENTATION_PLAN.md).
+later refinement layers altitude bands on top.
 """
 from __future__ import annotations
 
