@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/maplibre-gl": "^1.13.2",
     "leaflet": "^1.9.4",
+    "maplibre-gl": "^6.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-leaflet": "^5.0.0"

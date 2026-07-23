@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { NotamMap } from './components/NotamMap';
+import { NotamMapLibre } from './components/NotamMapLibre';
 import { UserGuideModal } from './components/UserGuideModal';
 import type { FeatureCollection } from 'geojson';
 
 function App() {
   const [allNotams, setAllNotams] = useState<FeatureCollection | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Map Engine State ('leaflet' default, persisted in localStorage)
+  const [mapEngine, setMapEngine] = useState<'leaflet' | 'maplibre'>(() => {
+    return (localStorage.getItem('notam_map_engine') as 'leaflet' | 'maplibre') || 'leaflet';
+  });
+
+  const handleSetMapEngine = (engine: 'leaflet' | 'maplibre') => {
+    setMapEngine(engine);
+    localStorage.setItem('notam_map_engine', engine);
+  };
 
   // Disclaimer State (Accepted state persists in localStorage)
   const [disclaimerState, setDisclaimerState] = useState<'pending' | 'accepted' | 'rejected'>(() => {
@@ -452,25 +463,49 @@ function App() {
 
         // Help Guide Support
         onOpenGuide={() => setIsGuideOpen(true)}
+
+        // Map Engine Switcher Props
+        mapEngine={mapEngine}
+        setMapEngine={handleSetMapEngine}
       />
 
-      <NotamMap 
-        filteredData={visibleData}
-        selectedNotam={selectedNotam}
-        onSelectNotam={handleSelectNotamFromMap}
-        bgaTurnpoints={bgaTurnpoints}
-        layers={layers}
-        
-        waypoints={waypoints}
-        onAddWaypoint={addWaypoint}
-        corridorGeoJSON={corridorResult?.corridor_geometry || null}
-        observationZones={observationZones}
-        
-        // Mobile and Double-Click Fix
-        isMobile={isMobile}
-        panToNotam={panToNotam}
-        setPanToNotam={setPanToNotam}
-      />
+      {mapEngine === 'maplibre' ? (
+        <NotamMapLibre 
+          filteredData={visibleData}
+          selectedNotam={selectedNotam}
+          onSelectNotam={handleSelectNotamFromMap}
+          bgaTurnpoints={bgaTurnpoints}
+          layers={layers}
+          
+          waypoints={waypoints}
+          onAddWaypoint={addWaypoint}
+          corridorGeoJSON={corridorResult?.corridor_geometry || null}
+          observationZones={observationZones}
+          
+          // Mobile and Double-Click Fix
+          isMobile={isMobile}
+          panToNotam={panToNotam}
+          setPanToNotam={setPanToNotam}
+        />
+      ) : (
+        <NotamMap 
+          filteredData={visibleData}
+          selectedNotam={selectedNotam}
+          onSelectNotam={handleSelectNotamFromMap}
+          bgaTurnpoints={bgaTurnpoints}
+          layers={layers}
+          
+          waypoints={waypoints}
+          onAddWaypoint={addWaypoint}
+          corridorGeoJSON={corridorResult?.corridor_geometry || null}
+          observationZones={observationZones}
+          
+          // Mobile and Double-Click Fix
+          isMobile={isMobile}
+          panToNotam={panToNotam}
+          setPanToNotam={setPanToNotam}
+        />
+      )}
 
       {isMobile && !isMobileSidebarOpen && disclaimerState === 'accepted' && (
         <div className="mobile-header-bar">

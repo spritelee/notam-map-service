@@ -48,6 +48,10 @@ interface SidebarProps {
 
   // Help Guide Support
   onOpenGuide: () => void;
+
+  // Map Engine Switcher Props
+  mapEngine: 'leaflet' | 'maplibre';
+  setMapEngine: (engine: 'leaflet' | 'maplibre') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -86,7 +90,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileSidebarOpen,
   setIsMobileSidebarOpen,
 
-  onOpenGuide
+  onOpenGuide,
+  mapEngine,
+  setMapEngine
 }) => {
   const [activeTab, setActiveTab] = useState<'filters' | 'route' | 'unplaceable'>('filters');
 
@@ -211,6 +217,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               unplaceableCount={unplaceableNotams.length}
               showUnplaceableOnly={showUnplaceableOnly}
               setShowUnplaceableOnly={setShowUnplaceableOnly}
+              mapEngine={mapEngine}
+              setMapEngine={setMapEngine}
             />
 
             <TaskPlanner 
@@ -255,6 +263,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   unplaceableCount={unplaceableNotams.length}
                   showUnplaceableOnly={showUnplaceableOnly}
                   setShowUnplaceableOnly={setShowUnplaceableOnly}
+                  mapEngine={mapEngine}
+                  setMapEngine={setMapEngine}
                 />
                 <details className="mobile-export-accordion" style={{ marginTop: '16px' }}>
                   <summary>📥 OpenAir & SUA Exports</summary>

@@ -31,7 +31,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <h3>💻 Web Workstation (Desktop & Laptop)</h3>
             <ul>
               <li>
-                <strong>Aeronautical Hazard Layers:</strong> Toggle layer checkboxes in the left panel to show/hide specific hazards. Features are color-coded (🔴 Red for Danger areas, 🟡 Yellow for Winch launch lines, 🪂 Orange for Drop Zones, 🟣 Purple for Drone areas & GPS Jamming).
+                <strong>Aeronautical Information Layers:</strong> Toggle layer checkboxes in the left panel to show/hide specific hazards. Features are color-coded (🔴 Red for Danger areas, 🟡 Yellow for Winch launch lines, 🪂 Orange for Drop Zones, 🟣 Purple for Drone areas & GPS Jamming).
               </li>
               <li>
                 <strong>Altitude Filtering:</strong> Drag the Floor/Ceiling range sliders to select your planned flight band. Only hazards intersecting this vertical band will remain on the map.
