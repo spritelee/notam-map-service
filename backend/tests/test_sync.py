@@ -1,9 +1,54 @@
+import sys
+from unittest.mock import MagicMock
+
+# Mock google.cloud and google.cloud.firestore to bypass ADC requirements
+test_docs = {}
+
+class MockDoc:
+    def __init__(self, exists, data=None):
+        self.exists = exists
+        self._data = data or {}
+    def to_dict(self):
+        return self._data
+
+class MockDocRef:
+    def __init__(self, doc_id):
+        self.doc_id = doc_id
+    async def get(self):
+        if self.doc_id in test_docs:
+            return MockDoc(True, test_docs[self.doc_id])
+        return MockDoc(False)
+    async def set(self, data):
+        test_docs[self.doc_id] = data
+
+class MockCollection:
+    def document(self, doc_id):
+        return MockDocRef(doc_id)
+
+class MockFirestoreClient:
+    def __init__(self, *args, **kwargs):
+        pass
+    def collection(self, name):
+        return MockCollection()
+
+mock_firestore_module = MagicMock()
+mock_firestore_module.AsyncClient = MockFirestoreClient
+mock_firestore_module.SERVER_TIMESTAMP = "mock_timestamp"
+
+mock_google_cloud = MagicMock()
+mock_google_cloud.firestore = mock_firestore_module
+
+sys.modules['google.cloud'] = mock_google_cloud
+sys.modules['google.cloud.firestore'] = mock_firestore_module
+
+# Now we can import the app and other components
 import pytest
 from fastapi.testclient import TestClient
 from backend.main import app, generate_cup_task, generate_tsk_task
 
 @pytest.fixture
 def client():
+    test_docs.clear()
     with TestClient(app) as c:
         yield c
 

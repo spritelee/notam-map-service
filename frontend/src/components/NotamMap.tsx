@@ -143,6 +143,13 @@ export const NotamMap: React.FC<NotamMapProps> = ({
   panToNotam,
   setPanToNotam
 }) => {
+  const isAlreadyClosed = useMemo(() => {
+    if (waypoints.length < 2) return false;
+    const start = waypoints[0];
+    const end = waypoints[waypoints.length - 1];
+    return Math.abs(start[0] - end[0]) < 0.0001 && Math.abs(start[1] - end[1]) < 0.0001;
+  }, [waypoints]);
+
   // 1. SMART Z-INDEX SORTING: Large macro polygons drawn first (bottom), small local hazards on top
   const sortedFeatures = useMemo(() => {
     if (!filteredData || !filteredData.features) return [];
@@ -396,6 +403,15 @@ export const NotamMap: React.FC<NotamMapProps> = ({
               <Popup>
                 <strong>Waypoint {i + 1} ({label})</strong>
                 <div>{pos[0].toFixed(4)}N, {Math.abs(pos[1]).toFixed(4)}W</div>
+                {isStart && waypoints.length >= 2 && !isAlreadyClosed && (
+                  <button
+                    className="action-btn"
+                    style={{ marginTop: '8px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', background: 'linear-gradient(135deg, #10b981, #047857)', border: 'none', color: '#fff', borderRadius: '4px', width: '100%' }}
+                    onClick={() => onAddWaypoint(pos)}
+                  >
+                    🏁 Set as Finish Point
+                  </button>
+                )}
               </Popup>
             </Marker>
           );
@@ -423,13 +439,23 @@ export const NotamMap: React.FC<NotamMapProps> = ({
                 <div style={{ fontWeight: 'bold' }}>BGA Turnpoint: {f.properties.code}</div>
                 <div>{f.properties.name}</div>
                 <div>Elevation: {f.properties.elevation_ft} ft</div>
-                <button 
-                  className="action-btn"
-                  style={{ marginTop: '8px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
-                  onClick={() => onAddWaypoint([lat, lon])}
-                >
-                  ➕ Add to Task
-                </button>
+                {waypoints.length > 0 && Math.abs(lat - waypoints[0][0]) < 0.0001 && Math.abs(lon - waypoints[0][1]) < 0.0001 && waypoints.length >= 2 && !isAlreadyClosed ? (
+                  <button 
+                    className="action-btn"
+                    style={{ marginTop: '8px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', background: 'linear-gradient(135deg, #10b981, #047857)', border: 'none', color: '#fff', borderRadius: '4px', width: '100%' }}
+                    onClick={() => onAddWaypoint([lat, lon])}
+                  >
+                    🏁 Set as Finish Point
+                  </button>
+                ) : (
+                  <button 
+                    className="action-btn"
+                    style={{ marginTop: '8px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                    onClick={() => onAddWaypoint([lat, lon])}
+                  >
+                    ➕ Add to Task
+                  </button>
+                )}
               </Popup>
             </Marker>
           );
