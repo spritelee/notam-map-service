@@ -227,7 +227,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
           {/* Task Summary Card */}
           <div className="task-summary-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-hover)', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--border-color)', marginBottom: '12px' }}>
             <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '500' }}>📏 Total Task Distance:</span>
-            <strong style={{ fontSize: '13px', color: 'var(--accent-color)' }}>
+            <strong style={{ fontSize: '13px', color: 'var(--accent-cyan)' }}>
               {totalDistance.toFixed(1)} NM / {(totalDistance * 1.852).toFixed(1)} km
             </strong>
           </div>
@@ -271,7 +271,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                         }} 
                         title="Configure Observation Zone"
                         className="arrow-btn"
-                        style={{ color: expandedIndex === index ? 'var(--accent-color)' : 'inherit', border: expandedIndex === index ? '1px solid var(--accent-color)' : '1px solid transparent', borderRadius: '3px' }}
+                        style={{ color: expandedIndex === index ? 'var(--accent-cyan)' : 'inherit', border: expandedIndex === index ? '1px solid var(--accent-cyan)' : '1px solid transparent', borderRadius: '3px' }}
                       >
                         ⚙️
                       </button>

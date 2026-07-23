@@ -358,9 +358,8 @@ export const NotamMap: React.FC<NotamMapProps> = ({
         {waypoints.length > 1 && (
           <Polyline
             positions={waypoints}
-            color="#00ffff"
-            weight={3}
-            dashArray="8, 8"
+            pathOptions={{ color: '#00ffff', weight: 3, dashArray: '8, 8', interactive: false }}
+            interactive={false}
           />
         )}
 
@@ -394,7 +393,8 @@ export const NotamMap: React.FC<NotamMapProps> = ({
                 key={`oz-cyl-${idx}`}
                 center={pos}
                 radius={radius}
-                pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.08, weight: 1.2 }}
+                pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.08, weight: 1.2, interactive: false }}
+                interactive={false}
               />
             );
           }
@@ -423,8 +423,8 @@ export const NotamMap: React.FC<NotamMapProps> = ({
               <Polyline
                 key={`oz-line-${idx}`}
                 positions={[pt1, pt2]}
-                color="#00ffff"
-                weight={2}
+                pathOptions={{ color: '#00ffff', weight: 2, interactive: false }}
+                interactive={false}
               />
             );
           }
@@ -459,13 +459,15 @@ export const NotamMap: React.FC<NotamMapProps> = ({
               <React.Fragment key={`oz-sect-grp-${idx}`}>
                 <Polygon
                   positions={vertices}
-                  pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.08, weight: 1.2 }}
+                  pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.08, weight: 1.2, interactive: false }}
+                  interactive={false}
                 />
                 {type === 'Keyhole' && (
                   <Circle
                     center={pos}
                     radius={500}
-                    pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.15, weight: 1.2 }}
+                    pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.15, weight: 1.2, interactive: false }}
+                    interactive={false}
                   />
                 )}
               </React.Fragment>
