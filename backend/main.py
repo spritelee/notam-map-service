@@ -1,18 +1,28 @@
 import os
 import time
 import logging
+import json
+import uuid
+import datetime
+import random
+import string
+import httpx
 from typing import List, Optional
-from fastapi import FastAPI, Query, HTTPException, Response
+from fastapi import FastAPI, Query, HTTPException, Response, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 from shapely.geometry import shape, LineString, mapping
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .services.pipeline import build_uk_geojson
 from .services.openair import geojson_to_openair
 from .services.sua import geojson_to_sua
 from .services.bga import get_bga_turnpoints
+from .database import engine, Base, get_db
+from .models import SharedTask
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +30,39 @@ app = FastAPI(
     title="UK NOTAM Flight Workstation API",
     description="Deterministic ingestion, layer filtering, and route corridor spatial analysis for UK NOTAMs"
 )
+
+# Startup DB initialization
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Initializing database tables...")
+    async with engine.begin() as conn:
+        if engine.url.drivername.startswith("sqlite"):
+            # Only create the shared_tasks table for SQLite fallback (to avoid Geometry column compile error)
+            await conn.run_sync(SharedTask.__table__.create, checkfirst=True)
+        else:
+            await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database tables initialized successfully.")
+
+
+# Pydantic models for Sync & Share
+class TaskShareRequest(BaseModel):
+    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+    corridor_nm: float = 20.0
+
+class WeGlideSyncRequest(BaseModel):
+    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+    weglide_api_key: str
+    pilot_dob: Optional[str] = None
+    task_name: Optional[str] = "NOTAM Workstation Task"
+    mock: bool = False
+
+class CloudDriveSyncRequest(BaseModel):
+    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+    corridor_nm: float = 20.0
+    provider: str # "google_drive" or "dropbox"
+    access_token: str
+    mock: bool = False
+
 
 # Tightened CORS origins
 app.add_middleware(
@@ -155,6 +198,493 @@ async def export_sua(features: List[dict]):
         content=sua_content,
         headers={"Content-Disposition": "attachment; filename=notams.sua"}
     )
+
+class TaskExportRequest(BaseModel):
+    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+
+def decimal_to_igc_coord(lat: float, lon: float) -> tuple[str, str]:
+    # Latitude
+    lat_sign = "N" if lat >= 0 else "S"
+    lat_abs = abs(lat)
+    lat_deg = int(lat_abs)
+    lat_min = (lat_abs - lat_deg) * 60
+    lat_min_int = int(round(lat_min * 1000))
+    if lat_min_int >= 60000:
+        lat_min_int = 0
+        lat_deg += 1
+    lat_str = f"{lat_deg:02d}{lat_min_int:05d}{lat_sign}"
+    
+    # Longitude
+    lon_sign = "E" if lon >= 0 else "W"
+    lon_abs = abs(lon)
+    lon_deg = int(lon_abs)
+    lon_min = (lon_abs - lon_deg) * 60
+    lon_min_int = int(round(lon_min * 1000))
+    if lon_min_int >= 60000:
+        lon_min_int = 0
+        lon_deg += 1
+    lon_str = f"{lon_deg:03d}{lon_min_int:05d}{lon_sign}"
+    
+    return lat_str, lon_str
+
+def find_closest_turnpoint_name(lon: float, lat: float, bga_features: list) -> str:
+    import math
+    closest_name = None
+    closest_dist = 999.0
+    for feat in bga_features:
+        geom = feat.get("geometry", {})
+        if geom.get("type") == "Point":
+            coords = geom.get("coordinates")
+            if coords and len(coords) >= 2:
+                dist = math.hypot(coords[0] - lon, coords[1] - lat)
+                if dist < closest_dist:
+                    closest_dist = dist
+                    props = feat.get("properties", {})
+                    closest_name = f"{props.get('code', '')} {props.get('name', '')}".strip()
+                    
+    if closest_dist < 0.005 and closest_name:
+        return closest_name
+    return f"{lat:.4f}_{lon:.4f}"
+
+@app.post("/api/export/task/igc")
+async def export_task_igc(req: TaskExportRequest):
+    """
+    Converts a list of task waypoints into a valid IGC file with C records (Task Declaration).
+    """
+    if len(req.waypoints) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 waypoints are required to declare a task.")
+        
+    import datetime
+    now = datetime.datetime.utcnow()
+    date_str = now.strftime("%d%m%y")
+    time_str = now.strftime("%H%M%S")
+    
+    lines = []
+    # Manufacturer record
+    lines.append("AXGD Antigravity Task Planner")
+    # Date of flight
+    lines.append(f"HFDTE{date_str}")
+    # Pilot Name
+    lines.append("HOPLTPILOT: Glider Pilot")
+    # Glider Type
+    lines.append("HOGTYGLIDER: Glider")
+    
+    # Task Header C record
+    num_wp = len(req.waypoints)
+    header_line = f"C{date_str}{time_str}{date_str}0001{num_wp:02d}BGA TASK DECLARATION"
+    lines.append(header_line)
+    
+    # BGA turnpoint snapping list
+    if BGA_CACHE["data"] is None:
+        BGA_CACHE["data"] = await get_bga_turnpoints()
+    bga_features = BGA_CACHE["data"].get("features", [])
+    
+    # Waypoint C records
+    for idx, pt in enumerate(req.waypoints):
+        lon, lat = pt[0], pt[1]
+        lat_str, lon_str = decimal_to_igc_coord(lat, lon)
+        
+        # Snap name to closest BGA turnpoint if matching
+        name = find_closest_turnpoint_name(lon, lat, bga_features)
+        
+        lines.append(f"C{lat_str}{lon_str}{name}")
+        
+    igc_content = "\r\n".join(lines) + "\r\n"
+    
+    return PlainTextResponse(
+        content=igc_content,
+        headers={"Content-Disposition": "attachment; filename=task.igc"}
+    )
+
+def generate_cup_task(waypoints: List[List[float]], bga_features: list) -> str:
+    lines = ["name,code,country,lat,lon,elev,style,rwdir,rwlen,rwdsth,freq,desc"]
+    wp_names = []
+    for idx, pt in enumerate(waypoints):
+        lon, lat = pt[0], pt[1]
+        lat_deg = int(abs(lat))
+        lat_min = (abs(lat) - lat_deg) * 60
+        lat_dir = "N" if lat >= 0 else "S"
+        lat_str = f"{lat_deg:02d}{lat_min:06.3f}{lat_dir}"
+
+        lon_deg = int(abs(lon))
+        lon_min = (abs(lon) - lon_deg) * 60
+        lon_dir = "E" if lon >= 0 else "W"
+        lon_str = f"{lon_deg:03d}{lon_min:06.3f}{lon_dir}"
+        
+        name = find_closest_turnpoint_name(lon, lat, bga_features)
+        code = name.split()[0] if len(name.split()) > 0 else f"WP{idx+1}"
+        lines.append(f'"{name}","{code}",UK,{lat_str},{lon_str},0m,1,,,,,"Waypoints"')
+        wp_names.append(name)
+    
+    lines.append("")
+    lines.append("__Tasks__")
+    task_line = f'"NOTAM Task",' + ",".join(f'"{n}"' for n in wp_names)
+    lines.append(task_line)
+    return "\r\n".join(lines) + "\r\n"
+
+def generate_tsk_task(waypoints: List[List[float]], bga_features: list) -> str:
+    import xml.etree.ElementTree as ET
+    root = ET.Element("Task", type="RT", task_speed="0", aat_min_time="0")
+    for idx, pt in enumerate(waypoints):
+        lon, lat = pt[0], pt[1]
+        name = find_closest_turnpoint_name(lon, lat, bga_features)
+        pt_type = "Start" if idx == 0 else ("Finish" if idx == len(waypoints) - 1 else "Turn")
+        
+        point_el = ET.SubElement(root, "Point", type=pt_type)
+        wp_el = ET.SubElement(point_el, "Waypoint", name=name, comment="", id=str(idx))
+        ET.SubElement(wp_el, "Location", latitude=f"{lat:.5f}", longitude=f"{lon:.5f}")
+        
+        if pt_type == "Start":
+            ET.SubElement(point_el, "ObservationZone", type="Line", radius="5000")
+        elif pt_type == "Finish":
+            ET.SubElement(point_el, "ObservationZone", type="Circle", radius="1000")
+        else:
+            ET.SubElement(point_el, "ObservationZone", type="Circle", radius="500")
+            
+    return ET.tostring(root, encoding="utf-8").decode("utf-8")
+
+# Unique share ID generator
+def generate_share_id() -> str:
+    chars = string.ascii_letters + string.digits
+    return "".join(random.choice(chars) for _ in range(8))
+
+@app.post("/api/task/share")
+async def share_task(req: TaskShareRequest, db: AsyncSession = Depends(get_db)):
+    if len(req.waypoints) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 waypoints are required to share a task.")
+    
+    for _ in range(10):
+        share_id = generate_share_id()
+        stmt = select(SharedTask).where(SharedTask.id == share_id)
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none() is None:
+            break
+    else:
+        raise HTTPException(status_code=500, detail="Failed to generate a unique share ID.")
+
+    shared = SharedTask(
+        id=share_id,
+        waypoints=json.dumps(req.waypoints),
+        corridor_nm=req.corridor_nm
+    )
+    db.add(shared)
+    await db.commit()
+    
+    return {
+        "share_id": share_id,
+        "share_url": f"/share/{share_id}"
+    }
+
+@app.get("/api/task/share/{share_id}")
+async def get_shared_task(share_id: str, db: AsyncSession = Depends(get_db)):
+    stmt = select(SharedTask).where(SharedTask.id == share_id)
+    result = await db.execute(stmt)
+    shared = result.scalar_one_or_none()
+    if not shared:
+        raise HTTPException(status_code=404, detail="Shared task not found.")
+    
+    return {
+        "share_id": shared.id,
+        "waypoints": json.loads(shared.waypoints),
+        "corridor_nm": shared.corridor_nm,
+        "created_at": shared.created_at.isoformat()
+    }
+
+@app.get("/api/task/share/{share_id}/cup")
+async def get_shared_task_cup(share_id: str, db: AsyncSession = Depends(get_db)):
+    stmt = select(SharedTask).where(SharedTask.id == share_id)
+    result = await db.execute(stmt)
+    shared = result.scalar_one_or_none()
+    if not shared:
+        raise HTTPException(status_code=404, detail="Shared task not found.")
+    
+    waypoints = json.loads(shared.waypoints)
+    if BGA_CACHE["data"] is None:
+        BGA_CACHE["data"] = await get_bga_turnpoints()
+    bga_features = BGA_CACHE["data"].get("features", [])
+    
+    cup_content = generate_cup_task(waypoints, bga_features)
+    return PlainTextResponse(
+        content=cup_content,
+        headers={"Content-Disposition": f"attachment; filename=task_{share_id}.cup"}
+    )
+
+@app.get("/api/task/share/{share_id}/tsk")
+async def get_shared_task_tsk(share_id: str, db: AsyncSession = Depends(get_db)):
+    stmt = select(SharedTask).where(SharedTask.id == share_id)
+    result = await db.execute(stmt)
+    shared = result.scalar_one_or_none()
+    if not shared:
+        raise HTTPException(status_code=404, detail="Shared task not found.")
+    
+    waypoints = json.loads(shared.waypoints)
+    if BGA_CACHE["data"] is None:
+        BGA_CACHE["data"] = await get_bga_turnpoints()
+    bga_features = BGA_CACHE["data"].get("features", [])
+    
+    tsk_content = generate_tsk_task(waypoints, bga_features)
+    return PlainTextResponse(
+        content=tsk_content,
+        headers={"Content-Disposition": f"attachment; filename=task_{share_id}.tsk", "Content-Type": "application/xml"}
+    )
+
+@app.get("/api/task/share/{share_id}/openair")
+async def get_shared_task_openair(share_id: str, db: AsyncSession = Depends(get_db)):
+    stmt = select(SharedTask).where(SharedTask.id == share_id)
+    result = await db.execute(stmt)
+    shared = result.scalar_one_or_none()
+    if not shared:
+        raise HTTPException(status_code=404, detail="Shared task not found.")
+    
+    waypoints = json.loads(shared.waypoints)
+    corridor_nm = shared.corridor_nm
+    
+    buffer_deg = corridor_nm * 0.016667
+    route_line = LineString(waypoints)
+    corridor_polygon = route_line.buffer(buffer_deg)
+    
+    all_notams = await get_cached_notams()
+    
+    intersecting_features = []
+    for feat in all_notams["features"]:
+        geom_dict = feat.get("geometry")
+        if not geom_dict:
+            continue
+        try:
+            geom_shapely = shape(geom_dict)
+            if geom_shapely.intersects(corridor_polygon):
+                intersecting_features.append(feat)
+        except Exception:
+            continue
+            
+    openair_content = geojson_to_openair(intersecting_features)
+    return PlainTextResponse(
+        content=openair_content,
+        headers={"Content-Disposition": f"attachment; filename=notams_{share_id}.openair"}
+    )
+
+@app.post("/api/sync/weglide")
+async def sync_weglide(req: WeGlideSyncRequest):
+    if len(req.waypoints) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 waypoints are required to declare a task.")
+    
+    weglide_waypoints = []
+    if BGA_CACHE["data"] is None:
+        BGA_CACHE["data"] = await get_bga_turnpoints()
+    bga_features = BGA_CACHE["data"].get("features", [])
+    
+    for idx, pt in enumerate(req.waypoints):
+        lon, lat = pt[0], pt[1]
+        name = find_closest_turnpoint_name(lon, lat, bga_features)
+        weglide_waypoints.append({
+            "name": name,
+            "latitude": lat,
+            "longitude": lon
+        })
+    
+    task_payload = {
+        "name": req.task_name,
+        "turnpoints": weglide_waypoints
+    }
+    
+    if req.mock:
+        return {
+            "success": True,
+            "message": "Simulated WeGlide Sync Successful (Simulator Mode)",
+            "task_id": random.randint(10000, 99999),
+            "declared_until": (datetime.datetime.utcnow() + datetime.timedelta(days=1)).isoformat() + "Z",
+            "logs": [
+                f"Authentication request sent using key: {req.weglide_api_key[:4]}...",
+                f"WeGlide user verified successfully.",
+                f"POST /v1/task: Pushed {len(req.waypoints)} waypoints.",
+                f"WeGlide saved task as ID {random.randint(10000, 99999)}.",
+                f"POST /v1/task/declaration: Declared task until tomorrow.",
+                "Sync process complete."
+            ]
+        }
+        
+    try:
+        async with httpx.AsyncClient() as client:
+            headers = {"X-API-Key": req.weglide_api_key, "Content-Type": "application/json"}
+            task_resp = await client.post("https://api.weglide.org/v1/task", json=task_payload, headers=headers, timeout=10.0)
+            if task_resp.status_code not in (200, 201):
+                raise HTTPException(status_code=task_resp.status_code, detail=f"WeGlide task creation failed: {task_resp.text}")
+            
+            task_data = task_resp.json()
+            task_id = task_data.get("id") or task_data.get("task_id") or random.randint(10000, 99999)
+                
+            dec_until = (datetime.datetime.utcnow() + datetime.timedelta(days=1)).isoformat() + "Z"
+            dec_payload = {
+                "task_id": task_id,
+                "declared_until": dec_until
+            }
+            dec_resp = await client.post("https://api.weglide.org/v1/task/declaration", json=dec_payload, headers=headers, timeout=10.0)
+            if dec_resp.status_code not in (200, 201):
+                raise HTTPException(status_code=dec_resp.status_code, detail=f"WeGlide declaration failed: {dec_resp.text}")
+                
+            return {
+                "success": True,
+                "message": "WeGlide Sync and Declaration Successful!",
+                "task_id": task_id,
+                "declared_until": dec_until
+            }
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Error connecting to WeGlide API: {str(e)}")
+
+@app.post("/api/sync/cloud-drive")
+async def sync_cloud_drive(req: CloudDriveSyncRequest):
+    if len(req.waypoints) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 waypoints are required to sync.")
+        
+    if BGA_CACHE["data"] is None:
+        BGA_CACHE["data"] = await get_bga_turnpoints()
+    bga_features = BGA_CACHE["data"].get("features", [])
+    
+    cup_content = generate_cup_task(req.waypoints, bga_features)
+    
+    buffer_deg = req.corridor_nm * 0.016667
+    route_line = LineString(req.waypoints)
+    corridor_polygon = route_line.buffer(buffer_deg)
+    
+    all_notams = await get_cached_notams()
+    intersecting_features = []
+    for feat in all_notams["features"]:
+        geom_dict = feat.get("geometry")
+        if not geom_dict:
+            continue
+        try:
+            geom_shapely = shape(geom_dict)
+            if geom_shapely.intersects(corridor_polygon):
+                intersecting_features.append(feat)
+        except Exception:
+            continue
+            
+    openair_content = geojson_to_openair(intersecting_features)
+    
+    timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    cup_filename = f"task_{timestamp}.cup"
+    openair_filename = f"corridor_notams_{timestamp}.openair"
+    
+    if req.mock:
+        return {
+            "success": True,
+            "message": f"Simulated {req.provider.replace('_', ' ').title()} Sync Successful (Simulator Mode)",
+            "files": [cup_filename, openair_filename],
+            "logs": [
+                f"Connected to {req.provider.replace('_', ' ').title()} API using authorization header.",
+                f"Verifying target directory existence: /LXNAV Connect/",
+                f"Target folder verified.",
+                f"Uploading {cup_filename} ({len(cup_content)} bytes)...",
+                f"Uploading {openair_filename} ({len(openair_content)} bytes)...",
+                f"Successfully synced with cloud storage."
+            ]
+        }
+        
+    try:
+        async with httpx.AsyncClient() as client:
+            if req.provider == "dropbox":
+                dbx_headers_cup = {
+                    "Authorization": f"Bearer {req.access_token}",
+                    "Dropbox-API-Arg": json.dumps({
+                        "path": f"/LXNAV Connect/{cup_filename}",
+                        "mode": "overwrite",
+                        "autorename": False,
+                        "mute": False
+                    }),
+                    "Content-Type": "application/octet-stream"
+                }
+                resp_cup = await client.post(
+                    "https://content.dropboxapi.com/2/files/upload",
+                    content=cup_content.encode("utf-8"),
+                    headers=dbx_headers_cup,
+                    timeout=15.0
+                )
+                if resp_cup.status_code != 200:
+                    raise HTTPException(status_code=resp_cup.status_code, detail=f"Dropbox upload error (.cup): {resp_cup.text}")
+                    
+                dbx_headers_air = {
+                    "Authorization": f"Bearer {req.access_token}",
+                    "Dropbox-API-Arg": json.dumps({
+                        "path": f"/LXNAV Connect/{openair_filename}",
+                        "mode": "overwrite",
+                        "autorename": False,
+                        "mute": False
+                    }),
+                    "Content-Type": "application/octet-stream"
+                }
+                resp_air = await client.post(
+                    "https://content.dropboxapi.com/2/files/upload",
+                    content=openair_content.encode("utf-8"),
+                    headers=dbx_headers_air,
+                    timeout=15.0
+                )
+                if resp_air.status_code != 200:
+                    raise HTTPException(status_code=resp_air.status_code, detail=f"Dropbox upload error (.openair): {resp_air.text}")
+                    
+                return {
+                    "success": True,
+                    "message": f"Successfully uploaded task files to Dropbox under /LXNAV Connect/",
+                    "files": [cup_filename, openair_filename]
+                }
+                
+            elif req.provider == "google_drive":
+                headers = {"Authorization": f"Bearer {req.access_token}", "Content-Type": "application/json"}
+                
+                metadata_cup = {
+                    "name": cup_filename,
+                    "mimeType": "text/plain"
+                }
+                create_resp_cup = await client.post(
+                    "https://www.googleapis.com/drive/v3/files",
+                    json=metadata_cup,
+                    headers=headers,
+                    timeout=10.0
+                )
+                if create_resp_cup.status_code != 200:
+                     raise HTTPException(status_code=create_resp_cup.status_code, detail=f"Google Drive file creation error (.cup): {create_resp_cup.text}")
+                file_id_cup = create_resp_cup.json().get("id")
+                
+                upload_resp_cup = await client.patch(
+                    f"https://www.googleapis.com/upload/drive/v3/files/{file_id_cup}?uploadType=media",
+                    content=cup_content.encode("utf-8"),
+                    headers={"Authorization": f"Bearer {req.access_token}", "Content-Type": "text/plain"},
+                    timeout=15.0
+                )
+                if upload_resp_cup.status_code != 200:
+                     raise HTTPException(status_code=upload_resp_cup.status_code, detail=f"Google Drive upload error (.cup): {upload_resp_cup.text}")
+
+                metadata_air = {
+                    "name": openair_filename,
+                    "mimeType": "text/plain"
+                }
+                create_resp_air = await client.post(
+                    "https://www.googleapis.com/drive/v3/files",
+                    json=metadata_air,
+                    headers=headers,
+                    timeout=10.0
+                )
+                if create_resp_air.status_code != 200:
+                     raise HTTPException(status_code=create_resp_air.status_code, detail=f"Google Drive file creation error (.openair): {create_resp_air.text}")
+                file_id_air = create_resp_air.json().get("id")
+                
+                upload_resp_air = await client.patch(
+                    f"https://www.googleapis.com/upload/drive/v3/files/{file_id_air}?uploadType=media",
+                    content=openair_content.encode("utf-8"),
+                    headers={"Authorization": f"Bearer {req.access_token}", "Content-Type": "text/plain"},
+                    timeout=15.0
+                )
+                if upload_resp_air.status_code != 200:
+                     raise HTTPException(status_code=upload_resp_air.status_code, detail=f"Google Drive upload error (.openair): {upload_resp_air.text}")
+
+                return {
+                    "success": True,
+                    "message": f"Successfully uploaded task files to Google Drive",
+                    "files": [cup_filename, openair_filename]
+                }
+            else:
+                raise HTTPException(status_code=400, detail="Invalid provider specified.")
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Error connecting to Cloud Drive API: {str(e)}")
 
 # Static file serving for Vite Frontend Build
 frontend_dir = os.path.join(os.path.dirname(__file__), "../frontend/dist")

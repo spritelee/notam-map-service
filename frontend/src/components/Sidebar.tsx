@@ -24,6 +24,7 @@ interface SidebarProps {
   visibleNotamsCount: number;
   onExportOpenAir: () => void;
   onExportSua: () => void;
+  onExportIgcTask: () => void;
   showUnplaceableOnly: boolean;
   setShowUnplaceableOnly: (val: boolean) => void;
   
@@ -42,6 +43,9 @@ interface SidebarProps {
   isMobile: boolean;
   isMobileSidebarOpen: boolean;
   setIsMobileSidebarOpen: (val: boolean) => void;
+
+  // Help Guide Support
+  onOpenGuide: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -60,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   visibleNotamsCount,
   onExportOpenAir,
   onExportSua,
+  onExportIgcTask,
   showUnplaceableOnly,
   setShowUnplaceableOnly,
   
@@ -75,7 +80,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   isMobile,
   isMobileSidebarOpen,
-  setIsMobileSidebarOpen
+  setIsMobileSidebarOpen,
+
+  onOpenGuide
 }) => {
   const [activeTab, setActiveTab] = useState<'filters' | 'route' | 'unplaceable'>('filters');
 
@@ -88,6 +95,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button className="action-btn export-btn secondary" onClick={onExportSua}>
         📥 Download .sua (ClearNav / Oudie)
       </button>
+      {waypoints.length >= 2 && (
+        <button 
+          className="action-btn export-btn igc-btn" 
+          onClick={onExportIgcTask}
+          style={{ background: 'linear-gradient(135deg, #10b981, #047857)', border: 'none' }}
+        >
+          📝 Download .igc Task Declaration
+        </button>
+      )}
     </div>
   );
 
@@ -106,8 +122,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           )}
         </div>
-        <div className="live-status-pill">
-          <span className="dot"></span> NATS UK Live Feed ({visibleNotamsCount} / {totalNotamsCount})
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
+          <div className="live-status-pill" style={{ marginTop: 0 }}>
+            <span className="dot"></span> NATS UK Live Feed ({visibleNotamsCount} / {totalNotamsCount})
+          </div>
+          <button className="user-guide-link-btn" onClick={onOpenGuide} title="View Workstation User Guide">
+            📖 Guide
+          </button>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { NotamMap } from './components/NotamMap';
+import { UserGuideModal } from './components/UserGuideModal';
 import type { FeatureCollection } from 'geojson';
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
   // Responsive Layout States
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -319,6 +321,25 @@ function App() {
     .catch(err => console.error("Export failed", err));
   };
 
+  const exportIgcTask = () => {
+    if (waypoints.length < 2) return;
+    const lngLatWaypoints = waypoints.map(wp => [wp[1], wp[0]]);
+    fetch('/api/export/task/igc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ waypoints: lngLatWaypoints })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `task.igc`;
+      a.click();
+    })
+    .catch(err => console.error("Export IGC failed", err));
+  };
+
   const formatAltitudeValue = (val: any, isUpper: boolean): string => {
     if (val === null || val === undefined) {
       return isUpper ? 'UNL' : 'SFC';
@@ -368,6 +389,7 @@ function App() {
         visibleNotamsCount={filteredFeatures.length}
         onExportOpenAir={exportOpenAir}
         onExportSua={exportSua}
+        onExportIgcTask={exportIgcTask}
         showUnplaceableOnly={showUnplaceableOnly}
         setShowUnplaceableOnly={setShowUnplaceableOnly}
         
@@ -385,6 +407,9 @@ function App() {
         isMobile={isMobile}
         isMobileSidebarOpen={isMobileSidebarOpen}
         setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+
+        // Help Guide Support
+        onOpenGuide={() => setIsGuideOpen(true)}
       />
 
       <NotamMap 
@@ -473,6 +498,11 @@ function App() {
           </div>
         </div>
       )}
+
+      <UserGuideModal 
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+      />
 
       {isLoading && (
         <div className="loading-overlay">

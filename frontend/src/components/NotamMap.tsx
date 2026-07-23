@@ -69,7 +69,7 @@ const getHazardColor = (type: string) => {
   if (t === 'GPS_JAMMING') return '#d946ef'; // Magenta
   if (t === 'AIRSPACE_STATUS') return '#2563eb'; // Blue
   if (t === 'LOW_LEVEL_HAZARD') return '#f43f5e'; // Rose/Pink
-  if (t === 'GROUND_SERVICES') return '#10b981'; // Green
+  if (t === 'GROUND_SERVICES') return '#0d9488'; // Teal
   if (t.includes('DANGER') || t.includes('RESTRICTED') || t.includes('TDA')) return '#ef4444'; // Red
   if (t.includes('PARACHUTE') || t.includes('DROP')) return '#f97316'; // Orange
   if (t.includes('WINCH') || t.includes('GLIDER')) return '#eab308'; // Yellow

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TaskSynchronizer } from './TaskSynchronizer';
 
 interface TaskPlannerProps {
   waypoints: [number, number][]; // [lat, lng]
@@ -233,13 +234,16 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
           </label>
 
           {waypoints.length >= 2 && (
-            <div className={`route-hazard-alert ${routeHazardsCount > 0 ? 'warning' : 'safe'}`} style={{ marginTop: '12px' }}>
-              {routeHazardsCount > 0 ? (
-                <span>⚠️ <strong>{routeHazardsCount} Hazards</strong> inside the {corridorNm} NM diversion boundary!</span>
-              ) : (
-                <span>✅ Corridor is clear of active hazards.</span>
-              )}
-            </div>
+            <>
+              <div className={`route-hazard-alert ${routeHazardsCount > 0 ? 'warning' : 'safe'}`} style={{ marginTop: '12px' }}>
+                {routeHazardsCount > 0 ? (
+                  <span>⚠️ <strong>{routeHazardsCount} Hazards</strong> inside the {corridorNm} NM diversion boundary!</span>
+                ) : (
+                  <span>✅ Corridor is clear of active hazards.</span>
+                )}
+              </div>
+              <TaskSynchronizer waypoints={waypoints} corridorNm={corridorNm} />
+            </>
           )}
         </div>
       )}

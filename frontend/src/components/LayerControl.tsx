@@ -107,7 +107,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
           <input type="checkbox" checked={layers.lowLevelHazard} onChange={() => toggleLayer('lowLevelHazard')} />
           <span>🎆 Low-level Warnings (Fireworks/Kites)</span>
         </label>
-        <label className="layer-toggle green">
+        <label className="layer-toggle teal">
           <input type="checkbox" checked={layers.groundServices} onChange={() => toggleLayer('groundServices')} />
           <span>⛽ Ground Services & Fuel</span>
         </label>
@@ -209,10 +209,12 @@ export const LayerControl: React.FC<LayerControlProps> = ({
 
       <div className="unplaceable-badge-container" style={{ marginTop: '14px' }}>
         <button 
-          className={`unplaceable-filter-btn ${showUnplaceableOnly ? 'active' : ''}`}
+          className={`unplaceable-filter-btn ${unplaceableCount > 0 ? 'warning' : 'all-clear'} ${showUnplaceableOnly ? 'active' : ''}`}
           onClick={() => setShowUnplaceableOnly(!showUnplaceableOnly)}
         >
-          ⚠️ {unplaceableCount} Unplaceable Notices {showUnplaceableOnly ? '(Showing)' : '(Review)'}
+          {unplaceableCount > 0 
+            ? `⚠️ ${unplaceableCount} Unplaceable Notices ${showUnplaceableOnly ? '(Showing)' : '(Review)'}`
+            : `✅ All Placed (${unplaceableCount} Unplaceable)`}
         </button>
       </div>
     </div>
