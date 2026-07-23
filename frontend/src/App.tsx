@@ -129,8 +129,8 @@ function App() {
     setObservationZones(prev => {
       const isStart = prev.length === 0;
       const defaultOz = {
-        type: isStart ? ('Line' as const) : ('Ring' as const),
-        radius: isStart ? 5000 : 3000,
+        type: isStart ? ('Line' as const) : ('Line' as const),
+        radius: 500, // 500m radius (1km width) BGA standard
         angle: 90
       };
       
