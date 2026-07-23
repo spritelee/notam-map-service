@@ -514,7 +514,7 @@ function App() {
       {isLoading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
-          <p>Ingesting live UK NATS Aeronautical Feed (1,500+ notices)...</p>
+          <p>Loading current NOTAMs...</p>
         </div>
       )}
     </div>
