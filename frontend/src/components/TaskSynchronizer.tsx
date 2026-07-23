@@ -4,7 +4,7 @@ interface TaskSynchronizerProps {
   waypoints: [number, number][]; // [lat, lng]
   corridorNm: number;
   observationZones: {
-    type: 'Cylinder' | 'Sector' | 'Line' | 'Keyhole';
+    type: 'Cylinder' | 'Sector' | 'Line' | 'Keyhole' | 'Ring';
     radius: number;
     angle: number;
   }[];
@@ -25,6 +25,10 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
   const [taskName, setTaskName] = useState<string>('');
   const [isNameEdited, setIsNameEdited] = useState<boolean>(false);
   const [weglideMock, setWeglideMock] = useState<boolean>(true);
+
+  // Global Task Options State
+  const [isAat, setIsAat] = useState<boolean>(false);
+  const [isPev, setIsPev] = useState<boolean>(false);
 
   const getDistanceNM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 3440.065;
@@ -154,6 +158,8 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
           provider: provider,
           access_token: accessToken || 'MOCK_TOKEN_12345',
           observation_zones: observationZones,
+          is_aat: isAat,
+          is_pev: isPev,
           mock: cloudMock
         })
       });
@@ -192,7 +198,9 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
         body: JSON.stringify({
           waypoints: lngLatWaypoints,
           corridor_nm: corridorNm,
-          observation_zones: observationZones
+          observation_zones: observationZones,
+          is_aat: isAat,
+          is_pev: isPev
         })
       });
 
@@ -216,6 +224,29 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
     <div className="task-synchronizer" style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
       <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold' }}>📡 Task & NOTAM Synchronizer</h4>
       
+      {/* Task Settings / Options */}
+      <div className="task-options-panel" style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg-hover)', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--border-color)', marginBottom: '12px' }}>
+        <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 'bold' }}>⚙️ Task Options</span>
+        <div style={{ display: 'flex', gap: '16px', marginTop: '2px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={isAat} 
+              onChange={(e) => setIsAat(e.target.checked)} 
+            />
+            Assigned Area Task (AAT)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={isPev} 
+              onChange={(e) => setIsPev(e.target.checked)} 
+            />
+            PEV Start Gate
+          </label>
+        </div>
+      </div>
+
       {/* Tab Selectors */}
       <div className="sync-tabs" style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
         <button 
@@ -371,6 +402,9 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
                   </a>
                   <a href={`/api/task/share/${shareId}/tsk`} download className="action-btn sm-btn" style={{ display: 'block', textDecoration: 'none', textAlign: 'center', padding: '6px', borderRadius: '4px', fontSize: '12px', background: 'var(--bg-hover)', color: 'inherit', border: '1px solid var(--border-color)' }}>
                     📥 Download .tsk (XCSoar XML)
+                  </a>
+                  <a href={`/api/task/share/${shareId}/igc`} download className="action-btn sm-btn" style={{ display: 'block', textDecoration: 'none', textAlign: 'center', padding: '6px', borderRadius: '4px', fontSize: '12px', background: 'var(--bg-hover)', color: 'inherit', border: '1px solid var(--border-color)' }}>
+                    📥 Download .igc Declaration
                   </a>
                   <a href={`/api/task/share/${shareId}/openair`} download className="action-btn sm-btn secondary-btn" style={{ display: 'block', textDecoration: 'none', textAlign: 'center', padding: '6px', borderRadius: '4px', fontSize: '12px', background: '#374151', color: '#fff', border: 'none' }}>
                     📥 Download .openair (Corridor NOTAMs)

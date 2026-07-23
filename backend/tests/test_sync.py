@@ -199,3 +199,72 @@ def test_api_sync_cloud_drive_mock(client):
     assert data["success"] is True
     assert "Simulated Dropbox Sync Successful" in data["message"]
     assert len(data["logs"]) > 0
+
+def test_generate_cup_task_aat():
+    waypoints = [
+        [-1.0322, 51.1856],
+        [-1.5000, 52.0000]
+    ]
+    bga_features = [
+        {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-1.0322, 51.1856]},
+            "properties": {"code": "LSH", "name": "Lasham Airfield"}
+        },
+        {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-1.5000, 52.0000]},
+            "properties": {"code": "XYZ", "name": "Test Turnpoint"}
+        }
+    ]
+    obs_zones = [
+        {"type": "Line", "radius": 5000, "angle": 180},
+        {"type": "Sector", "radius": 20000, "angle": 90}
+    ]
+    
+    # Standard task options: WpDis=True
+    cup_std = generate_cup_task(waypoints, bga_features, obs_zones, is_aat=False)
+    assert "WpDis=True" in cup_std
+    
+    # AAT task options: WpDis=False
+    cup_aat = generate_cup_task(waypoints, bga_features, obs_zones, is_aat=True)
+    assert "WpDis=False" in cup_aat
+
+def test_api_task_share_lifecycle_aat_pev_igc(client):
+    payload = {
+        "waypoints": [
+            [-1.0322, 51.1856],
+            [-1.5000, 52.0000]
+        ],
+        "corridor_nm": 15.0,
+        "observation_zones": [
+            {"type": "Line", "radius": 5000, "angle": 180},
+            {"type": "Ring", "radius": 3000, "angle": 90}
+        ],
+        "is_aat": True,
+        "is_pev": True
+    }
+    resp = client.post("/api/task/share", json=payload)
+    assert resp.status_code == 200
+    share_id = resp.json()["share_id"]
+    
+    # Get metadata
+    resp_get = client.get(f"/api/task/share/{share_id}")
+    assert resp_get.status_code == 200
+    data = resp_get.json()
+    assert data["is_aat"] is True
+    assert data["is_pev"] is True
+    
+    # Get CUP download with is_aat option passed down
+    resp_cup = client.get(f"/api/task/share/{share_id}/cup")
+    assert resp_cup.status_code == 200
+    assert "WpDis=False" in resp_cup.text
+    
+    # Get IGC C-record task declaration download
+    resp_igc = client.get(f"/api/task/share/{share_id}/igc")
+    assert resp_igc.status_code == 200
+    assert "AXGD Antigravity Task Planner" in resp_igc.text
+    assert "HFDTE" in resp_igc.text
+    # Coordinates in DMD format for Lasham: 5111136N 00101932W
+    assert "5111136N" in resp_igc.text
+    assert "00101932W" in resp_igc.text

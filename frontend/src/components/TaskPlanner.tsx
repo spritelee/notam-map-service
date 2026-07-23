@@ -80,10 +80,10 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
         nextZones[0] = { ...nextZones[0], type: 'Line', radius: 5000 };
       }
       if (nextZones.length > 1) {
-        nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Line', radius: 1000 };
+        nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Ring', radius: 3000 };
       }
       for (let i = 1; i < nextZones.length - 1; i++) {
-        if (nextZones[i].type === 'Line') {
+        if (nextZones[i].type === 'Line' || nextZones[i].type === 'Ring') {
           nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 10000, angle: 90 };
         }
       }
@@ -114,11 +114,11 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
         nextZones[0] = { ...nextZones[0], type: 'Line', radius: 5000 };
       }
       if (nextZones.length > 1) {
-        nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Line', radius: 1000 };
+        nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Ring', radius: 3000 };
       }
       // Re-evaluate any middle point that might have been a start/finish
       for (let i = 1; i < nextZones.length - 1; i++) {
-        if (nextZones[i].type === 'Line') {
+        if (nextZones[i].type === 'Line' || nextZones[i].type === 'Ring') {
           nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 10000, angle: 90 };
         }
       }
@@ -287,7 +287,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                                 next[index] = {
                                   ...next[index],
                                   type: newType,
-                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Sector' ? 10000 : (newType === 'Keyhole' ? 10000 : 500))
+                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Ring' ? 3000 : (newType === 'Sector' ? 10000 : (newType === 'Keyhole' ? 10000 : 500)))
                                 };
                                 return next;
                               });
@@ -298,6 +298,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                             <option value="Sector">FAI Sector</option>
                             <option value="Line">Start/Finish Line</option>
                             <option value="Keyhole">Keyhole Sector</option>
+                            <option value="Ring">Finish Ring</option>
                           </select>
                         </div>
 

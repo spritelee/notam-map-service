@@ -388,7 +388,7 @@ export const NotamMap: React.FC<NotamMapProps> = ({
           const radius = oz.radius;
           const angle = oz.angle || 90;
           
-          if (type === 'Cylinder') {
+          if (type === 'Cylinder' || type === 'Ring') {
             return (
               <Circle
                 key={`oz-cyl-${idx}`}

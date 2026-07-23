@@ -55,7 +55,7 @@ function App() {
   // Task Planner State
   const [waypoints, setWaypoints] = useState<[number, number][]>([]); // [lat, lng]
   const [observationZones, setObservationZones] = useState<{
-    type: 'Cylinder' | 'Sector' | 'Line' | 'Keyhole';
+    type: 'Cylinder' | 'Sector' | 'Line' | 'Keyhole' | 'Ring';
     radius: number; // meters
     angle: number; // degrees
   }[]>([]);
@@ -124,8 +124,8 @@ function App() {
     setObservationZones(prev => {
       const isStart = prev.length === 0;
       const defaultOz = {
-        type: isStart ? ('Line' as const) : ('Line' as const),
-        radius: isStart ? 5000 : 1000,
+        type: isStart ? ('Line' as const) : ('Ring' as const),
+        radius: isStart ? 5000 : 3000,
         angle: 90
       };
       

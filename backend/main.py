@@ -42,7 +42,7 @@ async def startup_event():
 
 # Pydantic models for Sync & Share
 class ObservationZoneConfig(BaseModel):
-    type: str = Field(..., pattern="^(Cylinder|Sector|Line|Keyhole)$")  # Lock down types
+    type: str = Field(..., pattern="^(Cylinder|Sector|Line|Keyhole|Ring)$")  # Lock down types
     radius: float = Field(..., ge=0.0, le=100000.0)  # Max 100km, no negative radius
     angle: Optional[float] = Field(90.0, ge=0.0, le=360.0)  # Standard degrees
 
@@ -50,6 +50,8 @@ class TaskShareRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
     corridor_nm: float = Field(20.0, le=100.0)
     observation_zones: Optional[List[ObservationZoneConfig]] = Field(None, max_length=50)
+    is_aat: Optional[bool] = False
+    is_pev: Optional[bool] = False
 
 class WeGlideSyncRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
@@ -64,6 +66,8 @@ class CloudDriveSyncRequest(BaseModel):
     provider: str # "google_drive" or "dropbox"
     access_token: str
     observation_zones: Optional[List[ObservationZoneConfig]] = Field(None, max_length=50)
+    is_aat: Optional[bool] = False
+    is_pev: Optional[bool] = False
     mock: bool = False
 
 
@@ -326,7 +330,7 @@ async def export_task_igc(req: TaskExportRequest):
         headers={"Content-Disposition": "attachment; filename=task.igc"}
     )
 
-def generate_cup_task(waypoints: List[List[float]], bga_features: list, observation_zones: Optional[List[dict]] = None) -> str:
+def generate_cup_task(waypoints: List[List[float]], bga_features: list, observation_zones: Optional[List[dict]] = None, is_aat: bool = False) -> str:
     lines = ["name,code,country,lat,lon,elev,style,rwdir,rwlen,rwdsth,freq,desc"]
     wp_names = []
     for idx, pt in enumerate(waypoints):
@@ -350,6 +354,9 @@ def generate_cup_task(waypoints: List[List[float]], bga_features: list, observat
     lines.append("__Tasks__")
     task_line = f'"NOTAM Task",' + ",".join(f'"{n}"' for n in wp_names)
     lines.append(task_line)
+    
+    wp_dis_str = "False" if is_aat else "True"
+    lines.append(f"Options,NoStart=00:00:00,TaskTime=00:00:00,WpDis={wp_dis_str},NearDis=0.5km,NearAlt=0m,BeforePts=1,AfterPts=1,Bonus=0")
 
     if not observation_zones:
         observation_zones = []
@@ -369,10 +376,13 @@ def generate_cup_task(waypoints: List[List[float]], bga_features: list, observat
         radius = oz.get("radius", 500.0)
         angle = oz.get("angle", 90.0)
         
-        # Style mappings: 0=Cylinder, 1=Symmetrical (sector), 2=To next point (start line), 3=To prev point (finish line)
+        # Style mappings: 0=Cylinder, 1=Symmetrical (sector), 2=To next point (start line), 3=To prev point (finish line/ring)
         if oz_type == "Line":
             style = 2 if idx == 0 else 3
             line_flag = 1
+        elif oz_type == "Ring":
+            style = 3
+            line_flag = 0
         elif oz_type in ("Sector", "Keyhole"):
             style = 1
             line_flag = 0
@@ -458,6 +468,8 @@ async def share_task(req: TaskShareRequest):
         "waypoints": json.dumps(req.waypoints),
         "corridor_nm": req.corridor_nm,
         "observation_zones": json.dumps([oz.model_dump() for oz in req.observation_zones]) if req.observation_zones else None,
+        "is_aat": req.is_aat,
+        "is_pev": req.is_pev,
         "created_at": firestore.SERVER_TIMESTAMP
     })
     
@@ -479,6 +491,8 @@ async def get_shared_task(share_id: str):
         "waypoints": json.loads(shared["waypoints"]),
         "corridor_nm": shared["corridor_nm"],
         "observation_zones": json.loads(shared.get("observation_zones")) if shared.get("observation_zones") else None,
+        "is_aat": shared.get("is_aat", False),
+        "is_pev": shared.get("is_pev", False),
         "created_at": shared["created_at"].isoformat() if hasattr(shared["created_at"], "isoformat") else str(shared["created_at"])
     }
 
@@ -497,10 +511,53 @@ async def get_shared_task_cup(share_id: str):
         BGA_CACHE["data"] = await get_bga_turnpoints()
     bga_features = BGA_CACHE["data"].get("features", [])
     
-    cup_content = generate_cup_task(waypoints, bga_features, obs_zones)
+    cup_content = generate_cup_task(waypoints, bga_features, obs_zones, is_aat=shared.get("is_aat", False))
     return PlainTextResponse(
         content=cup_content,
         headers={"Content-Disposition": f"attachment; filename=task_{share_id}.cup"}
+    )
+
+@app.get("/api/task/share/{share_id}/igc")
+async def get_shared_task_igc(share_id: str):
+    doc_ref = db.collection("shared_tasks").document(share_id)
+    doc = await doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Shared task not found.")
+    
+    shared = doc.to_dict()
+    waypoints = json.loads(shared["waypoints"])
+    
+    if BGA_CACHE["data"] is None:
+        BGA_CACHE["data"] = await get_bga_turnpoints()
+    bga_features = BGA_CACHE["data"].get("features", [])
+    
+    # Generate C-records sequence inside .igc file
+    import datetime
+    now = datetime.datetime.utcnow()
+    date_str = now.strftime("%d%m%y")
+    time_str = now.strftime("%H%M%S")
+    
+    lines = []
+    lines.append("AXGD Antigravity Task Planner")
+    lines.append(f"HFDTE{date_str}")
+    lines.append("HOPLTPILOT: Glider Pilot")
+    lines.append("HOGTYGLIDER: Glider")
+    
+    num_wp = len(waypoints)
+    header_line = f"C{date_str}{time_str}{date_str}0001{num_wp:02d}BGA TASK DECLARATION"
+    lines.append(header_line)
+    
+    for idx, pt in enumerate(waypoints):
+        lon, lat = pt[0], pt[1]
+        lat_str, lon_str = decimal_to_igc_coord(lat, lon)
+        name = find_closest_turnpoint_name(lon, lat, bga_features)
+        lines.append(f"C{lat_str}{lon_str}{name}")
+        
+    igc_content = "\r\n".join(lines) + "\r\n"
+    
+    return PlainTextResponse(
+        content=igc_content,
+        headers={"Content-Disposition": f"attachment; filename=task_{share_id}.igc"}
     )
 
 @app.get("/api/task/share/{share_id}/tsk")
@@ -635,7 +692,7 @@ async def sync_cloud_drive(req: CloudDriveSyncRequest):
     bga_features = BGA_CACHE["data"].get("features", [])
     
     obs_zones = [oz.model_dump() for oz in req.observation_zones] if req.observation_zones else None
-    cup_content = generate_cup_task(req.waypoints, bga_features, obs_zones)
+    cup_content = generate_cup_task(req.waypoints, bga_features, obs_zones, is_aat=req.is_aat)
     
     buffer_deg = req.corridor_nm * 0.016667
     route_line = LineString(req.waypoints)
