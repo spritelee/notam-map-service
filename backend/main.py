@@ -230,7 +230,7 @@ async def filter_by_route(req: RouteRequest):
 class ExportRequest(BaseModel):
     features: List[dict] = Field(..., max_length=2000)
 
-@app.post("/api/export/openair")
+@app.post("/api/export/openair", dependencies=[Depends(rate_limit(30, 60))])
 async def export_openair(req: ExportRequest):
     """
     Converts a list of filtered GeoJSON features into a valid OpenAir file for XCSoar / LX.
@@ -241,7 +241,7 @@ async def export_openair(req: ExportRequest):
         headers={"Content-Disposition": "attachment; filename=notams.openair"}
     )
 
-@app.post("/api/export/sua")
+@app.post("/api/export/sua", dependencies=[Depends(rate_limit(30, 60))])
 async def export_sua(req: ExportRequest):
     """
     Converts a list of filtered GeoJSON features into a valid SUA file.
@@ -299,7 +299,7 @@ def find_closest_turnpoint_name(lon: float, lat: float, bga_features: list) -> s
         return closest_name
     return f"{lat:.4f}_{lon:.4f}"
 
-@app.post("/api/export/task/igc")
+@app.post("/api/export/task/igc", dependencies=[Depends(rate_limit(30, 60))])
 async def export_task_igc(req: TaskExportRequest):
     """
     Converts a list of task waypoints into a valid IGC file with C records (Task Declaration).
