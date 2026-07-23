@@ -374,7 +374,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                   <span>✅ Corridor is clear of active hazards.</span>
                 )}
               </div>
-              <TaskSynchronizer waypoints={waypoints} corridorNm={corridorNm} observationZones={observationZones} />
+              <TaskSynchronizer waypoints={waypoints} corridorNm={corridorNm} observationZones={observationZones} bgaTurnpoints={bgaTurnpoints} />
             </>
           )}
         </div>

@@ -8,11 +8,12 @@ interface TaskSynchronizerProps {
     radius: number;
     angle: number;
   }[];
+  bgaTurnpoints?: any;
 }
 
 type TabType = 'weglide' | 'clouddrive' | 'share';
 
-export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, corridorNm, observationZones }) => {
+export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, corridorNm, observationZones, bgaTurnpoints }) => {
   const [activeTab, setActiveTab] = useState<TabType>('weglide');
   const [loading, setLoading] = useState<boolean>(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -21,8 +22,43 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
   // WeGlide State
   const [weglideKey, setWeglideKey] = useState<string>('');
   const [pilotDob, setPilotDob] = useState<string>('');
-  const [taskName, setTaskName] = useState<string>('NOTAM Workstation Task');
+  const [taskName, setTaskName] = useState<string>('');
+  const [isNameEdited, setIsNameEdited] = useState<boolean>(false);
   const [weglideMock, setWeglideMock] = useState<boolean>(true);
+
+  const getDistanceNM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 3440.065;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  useEffect(() => {
+    if (waypoints.length === 0) {
+      setTaskName('');
+      setIsNameEdited(false);
+      return;
+    }
+
+    if (!isNameEdited) {
+      const codes = waypoints.map((wp, idx) => {
+        const match = bgaTurnpoints?.features?.find((f: any) => {
+          const [wlng, wlat] = f.geometry.coordinates;
+          const dist = getDistanceNM(wp[0], wp[1], wlat, wlng);
+          return dist < 0.2;
+        });
+        return match?.properties?.code || `WP${idx + 1}`;
+      });
+      setTaskName(codes.join(' > '));
+    }
+  }, [waypoints, bgaTurnpoints, isNameEdited]);
 
   // Cloud Drive State
   const [provider, setProvider] = useState<'google_drive' | 'dropbox'>('dropbox');
@@ -228,7 +264,7 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
                 type="text" 
                 placeholder="Enter task name..." 
                 value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
+                onChange={(e) => { setTaskName(e.target.value); setIsNameEdited(true); }}
                 style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-card)' }}
               />
             </div>
