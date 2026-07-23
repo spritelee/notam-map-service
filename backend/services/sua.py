@@ -3,6 +3,8 @@ Tim Newport-Peace (TNP) SUA format serializer for XCSoar, Oudie, and LX Navigati
 Transforms GeoJSON NOTAM FeatureCollections into valid .sua airspace blocks.
 """
 from typing import List, Dict, Any
+import datetime
+
 
 def _deg_to_sua_dms(deg: float, is_lat: bool) -> str:
     """Convert decimal degrees to NDDMMSS/SDDMMSS or EDDDMMSS/WDDDMMSS (no colons)."""
@@ -37,10 +39,30 @@ def _deg_to_sua_dms(deg: float, is_lat: bool) -> str:
 
 def geojson_to_sua(features: List[Dict[str, Any]]) -> str:
     """Generates a Tim Newport-Peace SUA string from a list of GeoJSON features."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    gen_time_str = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    
+    valid_until = None
+    for feat in features:
+        end_utc = feat.get("properties", {}).get("end_utc")
+        if end_utc:
+            try:
+                dt_val = datetime.datetime.fromisoformat(end_utc.replace("Z", "+00:00"))
+                if valid_until is None or dt_val < valid_until:
+                    valid_until = dt_val
+            except Exception:
+                pass
+                
+    valid_until_str = valid_until.strftime("%Y-%m-%d %H:%M:%S UTC") if valid_until else "Unknown / Permanent"
+    
     lines = [
         "* UK NOTAM SUA Airspace File - Generated for VFR / Gliders",
+        f"* Tool: UK NOTAM Flight Workstation (https://notam.leestimmel.net)",
+        f"* Generated At: {gen_time_str}",
+        f"* Valid Until: {valid_until_str}",
         ""
     ]
+
     
     for feat in features:
         props = feat.get("properties", {})

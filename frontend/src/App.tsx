@@ -472,14 +472,30 @@ function App() {
         setPanToNotam={setPanToNotam}
       />
 
-      {isMobile && (
+      {isMobile && !isMobileSidebarOpen && disclaimerState === 'accepted' && (
+        <div className="mobile-header-bar">
+          <div className="brand-container">
+            <img src="/favicon.png" alt="NOTAM Map Logo" className="header-logo" />
+            <span className="mobile-header-title">NOTAM Map Service</span>
+          </div>
+          <button 
+            className="mobile-header-menu-btn"
+            onClick={() => setIsMobileSidebarOpen(true)}
+            aria-label="Open sidebar controls menu"
+          >
+            ☰ Menu
+          </button>
+        </div>
+      )}
+
+      {isMobile && !selectedNotam && (
         <button 
           className={`mobile-fab ${isMobileSidebarOpen ? 'active' : ''}`}
           onClick={() => setIsMobileSidebarOpen(prev => !prev)}
           aria-expanded={isMobileSidebarOpen}
           aria-label="Toggle filter and route workbench controls"
         >
-          {isMobileSidebarOpen ? '✕ Map View' : '⚙️ Workbench'}
+          {isMobileSidebarOpen ? '✕ Map View' : '☰ Workbench'}
         </button>
       )}
 

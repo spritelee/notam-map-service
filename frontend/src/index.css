@@ -779,9 +779,9 @@ body, html, #root {
   /* Map occupies full screen */
   .is-mobile .map-container {
     width: 100vw;
-    height: 100vh;
+    height: calc(100vh - 50px);
     position: absolute;
-    top: 0;
+    top: 50px;
     left: 0;
     z-index: 1;
   }
@@ -939,7 +939,7 @@ body, html, #root {
 
 /* Floating Action Button (FAB) */
 .mobile-fab {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 1060;
@@ -1823,6 +1823,60 @@ body, html, #root {
     font-size: 12.5px;
     width: 100%;
   }
+}
+
+/* Mobile Header Bar styling */
+.mobile-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+  padding: 0 16px;
+  background: rgba(15, 23, 34, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.mobile-header-bar .brand-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-header-bar .mobile-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+
+.mobile-header-bar .mobile-header-menu-btn {
+  background: rgba(0, 210, 255, 0.12);
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  color: var(--accent-blue);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.mobile-header-bar .mobile-header-menu-btn:hover {
+  background: rgba(0, 210, 255, 0.25);
+  border-color: var(--accent-blue);
+  color: #fff;
 }
 
 

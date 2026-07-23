@@ -3,6 +3,8 @@ OpenAir format serializer for XCSoar, LX Navigation, and SeeYou.
 Transforms GeoJSON NOTAM FeatureCollections into valid OpenAir airspace blocks.
 """
 from typing import List, Dict, Any
+import datetime
+
 
 def _deg_to_dms(deg: float, is_lat: bool) -> str:
     """Convert decimal degrees to DD:MM:SS N/S or DDD:MM:SS E/W."""
@@ -24,12 +26,34 @@ def _deg_to_dms(deg: float, is_lat: bool) -> str:
 
 def geojson_to_openair(features: List[Dict[str, Any]]) -> str:
     """Generates an OpenAir string from a list of GeoJSON features."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    gen_time_str = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    
+    # Calculate valid_until (earliest end_utc of any NOTAM in features)
+    valid_until = None
+    for feat in features:
+        end_utc = feat.get("properties", {}).get("end_utc")
+        if end_utc:
+            try:
+                dt_val = datetime.datetime.fromisoformat(end_utc.replace("Z", "+00:00"))
+                if valid_until is None or dt_val < valid_until:
+                    valid_until = dt_val
+            except Exception:
+                pass
+                
+    valid_until_str = valid_until.strftime("%Y-%m-%d %H:%M:%S UTC") if valid_until else "Unknown / Permanent"
+    
+    width = 75
     lines = [
-        "*****************************************************************",
-        "* UK NOTAM OpenAir Airspace File - Generated for VFR / Gliders *",
-        "*****************************************************************",
+        "*" * width,
+        f"* UK NOTAM OpenAir Airspace File - Generated for VFR / Gliders{' ':<11} *",
+        f"* Tool: UK NOTAM Flight Workstation (https://notam.leestimmel.net){' ':<11} *",
+        f"* Generated At: {gen_time_str:<56} *",
+        f"* Valid Until:  {valid_until_str:<56} *",
+        "*" * width,
         ""
     ]
+
     
     for feat in features:
         props = feat.get("properties", {})
