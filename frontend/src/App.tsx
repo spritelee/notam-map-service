@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { NotamMap } from './components/NotamMap';
 import { NotamMapLibre } from './components/NotamMapLibre';
+import { MapEngineSwitcher } from './components/MapEngineSwitcher';
 import { UserGuideModal } from './components/UserGuideModal';
 import type { FeatureCollection } from 'geojson';
 
@@ -496,12 +497,13 @@ function App() {
         // Help Guide Support
         onOpenGuide={() => setIsGuideOpen(true)}
 
-        // Map Engine Switcher Props
-        mapEngine={mapEngine}
-        setMapEngine={handleSetMapEngine}
-
         // Staleness metadata
         notamMeta={notamMeta}
+      />
+
+      <MapEngineSwitcher 
+        mapEngine={mapEngine}
+        setMapEngine={handleSetMapEngine}
       />
 
       {mapEngine === 'maplibre' ? (

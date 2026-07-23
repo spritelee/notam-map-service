@@ -31,8 +31,6 @@ interface LayerControlProps {
   unplaceableCount: number;
   showUnplaceableOnly: boolean;
   setShowUnplaceableOnly: (val: boolean) => void;
-  mapEngine: 'leaflet' | 'maplibre';
-  setMapEngine: (engine: 'leaflet' | 'maplibre') => void;
 }
 
 const formatAltitude = (fl: number): string => {
@@ -57,9 +55,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
   setDateFilters,
   unplaceableCount,
   showUnplaceableOnly,
-  setShowUnplaceableOnly,
-  mapEngine,
-  setMapEngine
+  setShowUnplaceableOnly
 }) => {
   const toggleLayer = (key: keyof typeof layers) => {
     setLayers((prev: any) => ({ ...prev, [key]: !prev[key] }));
@@ -210,46 +206,6 @@ export const LayerControl: React.FC<LayerControlProps> = ({
           />
           <span>This Week</span>
         </label>
-      </div>
-
-      <div className="section-title" style={{ marginTop: '20px' }}>
-        <span>⚡ Rendering Engine (Experimental)</span>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
-        <button
-          type="button"
-          onClick={() => setMapEngine('leaflet')}
-          style={{
-            padding: '8px',
-            borderRadius: '6px',
-            border: mapEngine === 'leaflet' ? '2px solid #38bdf8' : '1px solid #334155',
-            background: mapEngine === 'leaflet' ? 'rgba(56, 189, 248, 0.15)' : '#1e293b',
-            color: mapEngine === 'leaflet' ? '#38bdf8' : '#94a3b8',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            textAlign: 'center'
-          }}
-        >
-          🍃 Leaflet (Default)
-        </button>
-        <button
-          type="button"
-          onClick={() => setMapEngine('maplibre')}
-          style={{
-            padding: '8px',
-            borderRadius: '6px',
-            border: mapEngine === 'maplibre' ? '2px solid #a855f7' : '1px solid #334155',
-            background: mapEngine === 'maplibre' ? 'rgba(168, 85, 247, 0.15)' : '#1e293b',
-            color: mapEngine === 'maplibre' ? '#c084fc' : '#94a3b8',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            textAlign: 'center'
-          }}
-        >
-          ⚡ MapLibre (WebGL Test)
-        </button>
       </div>
     </div>
   );
