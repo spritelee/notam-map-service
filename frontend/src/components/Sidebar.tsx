@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { LayerControl } from './LayerControl';
+import { TaskPlanner } from './TaskPlanner';
 import { UnplaceableDrawer } from './UnplaceableDrawer';
 
 interface SidebarProps {
@@ -25,6 +26,22 @@ interface SidebarProps {
   onExportSua: () => void;
   showUnplaceableOnly: boolean;
   setShowUnplaceableOnly: (val: boolean) => void;
+  
+  // Task Planner Props
+  waypoints: [number, number][];
+  clearRoute: () => void;
+  corridorNm: number;
+  setCorridorNm: (val: number) => void;
+  isCorridorFilterActive: boolean;
+  setIsCorridorFilterActive: (val: boolean) => void;
+  bgaTurnpoints: any;
+  setWaypoints: React.Dispatch<React.SetStateAction<[number, number][]>>;
+  routeHazardsCount: number;
+
+  // Mobile layout props
+  isMobile: boolean;
+  isMobileSidebarOpen: boolean;
+  setIsMobileSidebarOpen: (val: boolean) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -44,46 +61,171 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onExportOpenAir,
   onExportSua,
   showUnplaceableOnly,
-  setShowUnplaceableOnly
+  setShowUnplaceableOnly,
+  
+  waypoints,
+  clearRoute,
+  corridorNm,
+  setCorridorNm,
+  isCorridorFilterActive,
+  setIsCorridorFilterActive,
+  bgaTurnpoints,
+  setWaypoints,
+  routeHazardsCount,
+
+  isMobile,
+  isMobileSidebarOpen,
+  setIsMobileSidebarOpen
 }) => {
+  const [activeTab, setActiveTab] = useState<'filters' | 'route' | 'unplaceable'>('filters');
+
+  // Helper to render the export buttons panel
+  const renderExportSection = (isCompact = false) => (
+    <div className={`export-section ${isCompact ? 'compact' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <button className="action-btn export-btn" onClick={onExportOpenAir}>
+        📥 Download .openair (XCSoar / LX)
+      </button>
+      <button className="action-btn export-btn secondary" onClick={onExportSua}>
+        📥 Download .sua (ClearNav / Oudie)
+      </button>
+    </div>
+  );
+
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isMobile ? 'mobile-drawer' : ''} ${isMobileSidebarOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
-        <h1>NOTAM Map Service</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>NOTAM Map Service</h1>
+          {isMobile && (
+            <button 
+              className="close-drawer-btn" 
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close sidebar panel"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div className="live-status-pill">
           <span className="dot"></span> NATS UK Live Feed ({visibleNotamsCount} / {totalNotamsCount})
         </div>
       </div>
 
-      <div className="sidebar-content">
-        <LayerControl 
-          layers={layers}
-          setLayers={setLayers}
-          altitudeFloor={altitudeFloor}
-          setAltitudeFloor={setAltitudeFloor}
-          altitudeCeiling={altitudeCeiling}
-          setAltitudeCeiling={setAltitudeCeiling}
-          dateFilters={dateFilters}
-          setDateFilters={setDateFilters}
-          unplaceableCount={unplaceableNotams.length}
-          showUnplaceableOnly={showUnplaceableOnly}
-          setShowUnplaceableOnly={setShowUnplaceableOnly}
-        />
-
-        <UnplaceableDrawer 
-          unplaceableNotams={unplaceableNotams}
-          onSelectNotam={onSelectNotam}
-          selectedNotamId={selectedNotamId}
-        />
-
-        <div className="export-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button className="action-btn export-btn" onClick={onExportOpenAir}>
-            📥 Download .openair (XCSoar / LX)
+      {isMobile && (
+        <div className="mobile-tabs-header">
+          <button 
+            className={`tab-btn ${activeTab === 'filters' ? 'active' : ''}`}
+            onClick={() => setActiveTab('filters')}
+          >
+            🗂️ Filters
           </button>
-          <button className="action-btn export-btn secondary" onClick={onExportSua}>
-            📥 Download .sua (ClearNav / Oudie)
+          <button 
+            className={`tab-btn ${activeTab === 'route' ? 'active' : ''}`}
+            onClick={() => setActiveTab('route')}
+          >
+            🛰️ Route
+            {waypoints.length > 0 && <span className="tab-badge">{waypoints.length}</span>}
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'unplaceable' ? 'active' : ''}`}
+            onClick={() => setActiveTab('unplaceable')}
+          >
+            ⚠️ Unplaceable
+            {unplaceableNotams.length > 0 && (
+              <span className="tab-badge warning-badge">{unplaceableNotams.length}</span>
+            )}
           </button>
         </div>
+      )}
+
+      <div className="sidebar-content">
+        {!isMobile ? (
+          // Desktop View: Stacked Layout
+          <>
+            <LayerControl 
+              layers={layers}
+              setLayers={setLayers}
+              altitudeFloor={altitudeFloor}
+              setAltitudeFloor={setAltitudeFloor}
+              altitudeCeiling={altitudeCeiling}
+              setAltitudeCeiling={setAltitudeCeiling}
+              dateFilters={dateFilters}
+              setDateFilters={setDateFilters}
+              unplaceableCount={unplaceableNotams.length}
+              showUnplaceableOnly={showUnplaceableOnly}
+              setShowUnplaceableOnly={setShowUnplaceableOnly}
+            />
+
+            <TaskPlanner 
+              waypoints={waypoints}
+              clearRoute={clearRoute}
+              corridorNm={corridorNm}
+              setCorridorNm={setCorridorNm}
+              isCorridorFilterActive={isCorridorFilterActive}
+              setIsCorridorFilterActive={setIsCorridorFilterActive}
+              routeHazardsCount={routeHazardsCount}
+              bgaTurnpoints={bgaTurnpoints}
+              setWaypoints={setWaypoints}
+            />
+
+            <UnplaceableDrawer 
+              unplaceableNotams={unplaceableNotams}
+              onSelectNotam={onSelectNotam}
+              selectedNotamId={selectedNotamId}
+            />
+
+            {renderExportSection()}
+          </>
+        ) : (
+          // Mobile View: Tabbed Layout
+          <div className="mobile-tab-content">
+            {activeTab === 'filters' && (
+              <>
+                <LayerControl 
+                  layers={layers}
+                  setLayers={setLayers}
+                  altitudeFloor={altitudeFloor}
+                  setAltitudeFloor={setAltitudeFloor}
+                  altitudeCeiling={altitudeCeiling}
+                  setAltitudeCeiling={setAltitudeCeiling}
+                  dateFilters={dateFilters}
+                  setDateFilters={setDateFilters}
+                  unplaceableCount={unplaceableNotams.length}
+                  showUnplaceableOnly={showUnplaceableOnly}
+                  setShowUnplaceableOnly={setShowUnplaceableOnly}
+                />
+                <details className="mobile-export-accordion" style={{ marginTop: '16px' }}>
+                  <summary>📥 OpenAir & SUA Exports</summary>
+                  <div style={{ marginTop: '10px' }}>
+                    {renderExportSection(true)}
+                  </div>
+                </details>
+              </>
+            )}
+
+            {activeTab === 'route' && (
+              <TaskPlanner 
+                waypoints={waypoints}
+                clearRoute={clearRoute}
+                corridorNm={corridorNm}
+                setCorridorNm={setCorridorNm}
+                isCorridorFilterActive={isCorridorFilterActive}
+                setIsCorridorFilterActive={setIsCorridorFilterActive}
+                routeHazardsCount={routeHazardsCount}
+                bgaTurnpoints={bgaTurnpoints}
+                setWaypoints={setWaypoints}
+              />
+            )}
+
+            {activeTab === 'unplaceable' && (
+              <UnplaceableDrawer 
+                unplaceableNotams={unplaceableNotams}
+                onSelectNotam={onSelectNotam}
+                selectedNotamId={selectedNotamId}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

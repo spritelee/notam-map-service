@@ -56,6 +56,12 @@ async def get_cached_notams() -> dict:
                 raise HTTPException(status_code=503, detail="Unable to retrieve NOTAM data feed.")
     return CACHE["data"]
 
+class RouteRequest(BaseModel):
+    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+    corridor_nm: float = 20.0
+    min_fl: Optional[int] = 0
+    max_fl: Optional[int] = 100
+
 @app.get("/api/notams")
 async def get_notams():
     """
@@ -73,6 +79,60 @@ async def get_bga_points():
         BGA_CACHE["data"] = await get_bga_turnpoints()
         BGA_CACHE["timestamp"] = time.time()
     return BGA_CACHE["data"]
+
+@app.post("/api/route/filter")
+async def filter_by_route(req: RouteRequest):
+    """
+    Performs spatial corridor buffering around a route and returns all intersecting NOTAMs.
+    """
+    if len(req.waypoints) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 waypoints are required for a route.")
+    
+    all_notams = await get_cached_notams()
+    
+    # 1 NM approx 0.016667 degrees
+    buffer_deg = req.corridor_nm * 0.016667
+    route_line = LineString(req.waypoints)
+    corridor_polygon = route_line.buffer(buffer_deg)
+    
+    intersecting_features = []
+    unplaceable_features = []
+    
+    for feat in all_notams["features"]:
+        props = feat.get("properties", {})
+        
+        # Apply Altitude Floor/Ceiling Filter
+        lower = props.get("lower_fl") or 0
+        upper = props.get("upper_fl") or 999
+        if upper < req.min_fl or lower > req.max_fl:
+            continue
+            
+        geom_dict = feat.get("geometry")
+        if not geom_dict:
+            # Unplaceable notices in the UK FIR are always included with warning flags!
+            unplaceable_features.append(feat)
+            continue
+            
+        try:
+            geom_shapely = shape(geom_dict)
+            if geom_shapely.intersects(corridor_polygon):
+                intersecting_features.append(feat)
+        except Exception:
+            unplaceable_features.append(feat)
+            
+    corridor_geojson = mapping(corridor_polygon)
+    
+    return {
+        "type": "FeatureCollection",
+        "features": intersecting_features + unplaceable_features,
+        "corridor_geometry": corridor_geojson,
+        "meta": {
+            "total_route_hazards": len(intersecting_features),
+            "unplaceable_notices": len(unplaceable_features),
+            "corridor_nm": req.corridor_nm,
+            "waypoints_count": len(req.waypoints)
+        }
+    }
 
 @app.post("/api/export/openair")
 async def export_openair(features: List[dict]):

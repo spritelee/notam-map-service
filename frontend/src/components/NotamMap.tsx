@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import type { FeatureCollection } from 'geojson';
 
@@ -9,20 +9,43 @@ interface NotamMapProps {
   onSelectNotam: (notam: any) => void;
   bgaTurnpoints: any;
   layers: any;
+  
+  waypoints: [number, number][];
+  onAddWaypoint: (latlng: [number, number]) => void;
+  corridorGeoJSON: any;
+
+  // Mobile layout and double-click fix props
+  isMobile: boolean;
+  panToNotam: any;
+  setPanToNotam: (val: any) => void;
 }
 
-// Sub-component to pan to selected NOTAM
-const MapPanController = ({ selectedNotam }: { selectedNotam: any }) => {
+// Sub-component to pan to selected NOTAM on sidebar list select or click zoom
+const MapPanController = ({ 
+  panToNotam, 
+  setPanToNotam,
+  isMobile 
+}: { 
+  panToNotam: any; 
+  setPanToNotam: (val: any) => void; 
+  isMobile: boolean;
+}) => {
   const map = useMap();
   useEffect(() => {
-    if (selectedNotam && selectedNotam.geometry) {
-      const geoJsonLayer = L.geoJSON(selectedNotam as any);
+    if (panToNotam && panToNotam.geometry) {
+      const geoJsonLayer = L.geoJSON(panToNotam as any);
       const bounds = geoJsonLayer.getBounds();
       if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [80, 80], maxZoom: 11 });
+        const bottomPadding = isMobile ? 260 : 80;
+        map.fitBounds(bounds, { 
+          paddingBottomRight: [80, bottomPadding],
+          paddingTopLeft: [80, 80],
+          maxZoom: 11 
+        });
       }
+      setPanToNotam(null); // Clear state once pan starts/completes
     }
-  }, [selectedNotam, map]);
+  }, [panToNotam, setPanToNotam, map, isMobile]);
   return null;
 };
 
@@ -110,7 +133,15 @@ export const NotamMap: React.FC<NotamMapProps> = ({
   selectedNotam,
   onSelectNotam,
   bgaTurnpoints,
-  layers
+  layers,
+  
+  waypoints,
+  onAddWaypoint,
+  corridorGeoJSON,
+
+  isMobile,
+  panToNotam,
+  setPanToNotam
 }) => {
   // 1. SMART Z-INDEX SORTING: Large macro polygons drawn first (bottom), small local hazards on top
   const sortedFeatures = useMemo(() => {
@@ -198,36 +229,40 @@ export const NotamMap: React.FC<NotamMapProps> = ({
 
   const onEachFeature = (feature: any, layer: any) => {
     const props = feature.properties || {};
-    const lower = formatAltitudeValue(props.lower_fl, false);
-    const upper = formatAltitudeValue(props.upper_fl, true);
     
-    let parachuteWarning = '';
-    if (props.hazard_type === 'PARACHUTE') {
-      const txt = (props.raw_text || '').toUpperCase();
-      const isUnknown = txt.includes('SUBJ') || txt.includes('ATC') || txt.includes('CALL') || txt.includes('NOTAM') || txt.includes('UNKNOWN') || txt.includes('VAR') || txt.includes('OPR') || txt.includes('AMDT') || txt.includes('EST');
-      if (isUnknown) {
-        parachuteWarning = `
-          <div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 8px; margin-top: 10px; border-radius: 4px; font-size: 11px;">
-            <strong>⚠️ Activity Times Unknown / Variable:</strong> Call or radio nearest ATC / Drop Zone Operator to confirm if active before entering.
-          </div>
-        `;
-      } else {
-        parachuteWarning = `
-          <div style="background: rgba(56, 189, 248, 0.15); border-left: 4px solid #38bdf8; padding: 8px; margin-top: 10px; border-radius: 4px; font-size: 11px;">
-            <strong>ℹ️ Verify Drop Zone Activity:</strong> Call or radio ATC / Operator to confirm if active.
-          </div>
-        `;
+    if (!isMobile) {
+      const lower = formatAltitudeValue(props.lower_fl, false);
+      const upper = formatAltitudeValue(props.upper_fl, true);
+      
+      let parachuteWarning = '';
+      if (props.hazard_type === 'PARACHUTE') {
+        const txt = (props.raw_text || '').toUpperCase();
+        const isUnknown = txt.includes('SUBJ') || txt.includes('ATC') || txt.includes('CALL') || txt.includes('NOTAM') || txt.includes('UNKNOWN') || txt.includes('VAR') || txt.includes('OPR') || txt.includes('AMDT') || txt.includes('EST');
+        if (isUnknown) {
+          parachuteWarning = `
+            <div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 8px; margin-top: 10px; border-radius: 4px; font-size: 11px;">
+              <strong>⚠️ Activity Times Unknown / Variable:</strong> Call or radio nearest ATC / Drop Zone Operator to confirm if active before entering.
+            </div>
+          `;
+        } else {
+          parachuteWarning = `
+            <div style="background: rgba(56, 189, 248, 0.15); border-left: 4px solid #38bdf8; padding: 8px; margin-top: 10px; border-radius: 4px; font-size: 11px;">
+              <strong>ℹ️ Verify Drop Zone Activity:</strong> Call or radio ATC / Operator to confirm if active.
+            </div>
+          `;
+        }
       }
-    }
 
-    const popupContent = `
-      <div class="popup-title">${props.hazard_label || props.hazard_type}</div>
-      <div class="popup-meta">ID: <strong>${props.notam_id}</strong> (${props.q_code || ''})</div>
-      <div class="popup-meta" style="margin-top: 4px;">Vertical: <strong>${lower} - ${upper}</strong></div>
-      ${parachuteWarning}
-      <div class="popup-desc" style="margin-top: 8px;">${props.raw_text || ''}</div>
-    `;
-    layer.bindPopup(popupContent, { maxWidth: 550, minWidth: 380 });
+      const popupContent = `
+        <div class="popup-title">${props.hazard_label || props.hazard_type}</div>
+        <div class="popup-meta">ID: <strong>${props.notam_id}</strong> (${props.q_code || ''})</div>
+        <div class="popup-meta" style="margin-top: 4px;">Vertical: <strong>${lower} - ${upper}</strong></div>
+        ${parachuteWarning}
+        <div class="popup-desc" style="margin-top: 8px;">${props.raw_text || ''}</div>
+      `;
+      layer.bindPopup(popupContent, { maxWidth: 800, minWidth: 450 });
+    }
+    
     layer.on({
       click: () => onSelectNotam(feature)
     });
@@ -280,33 +315,91 @@ export const NotamMap: React.FC<NotamMapProps> = ({
               click: () => onSelectNotam(pin.feature)
             }}
           >
-            <Popup maxWidth={550} minWidth={380}>
-              <div className="popup-title">{pin.feature.properties?.hazard_label || pin.feature.properties?.hazard_type}</div>
-              <div className="popup-meta">ID: <strong>{pin.feature.properties?.notam_id}</strong></div>
-              <div className="popup-meta" style={{ marginTop: '4px' }}>Vertical: <strong>{formatAltitudeValue(pin.feature.properties?.lower_fl, false)} - {formatAltitudeValue(pin.feature.properties?.upper_fl, true)}</strong></div>
-              {pin.feature.properties?.hazard_type === 'PARACHUTE' && (
-                (() => {
-                  const txt = (pin.feature.properties?.raw_text || '').toUpperCase();
-                  const isUnknown = txt.includes('SUBJ') || txt.includes('ATC') || txt.includes('CALL') || txt.includes('NOTAM') || txt.includes('UNKNOWN') || txt.includes('VAR') || txt.includes('OPR') || txt.includes('AMDT') || txt.includes('EST');
-                  if (isUnknown) {
-                    return (
-                      <div style={{ background: 'rgba(239, 68, 68, 0.15)', borderLeft: '4px solid #ef4444', padding: '8px', marginTop: '10px', borderRadius: '4px', fontSize: '11px' }}>
-                        <strong>⚠️ Activity Times Unknown / Variable:</strong> Call or radio nearest ATC / Drop Zone Operator to confirm if active before entering.
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div style={{ background: 'rgba(56, 189, 248, 0.15)', borderLeft: '4px solid #38bdf8', padding: '8px', marginTop: '10px', borderRadius: '4px', fontSize: '11px' }}>
-                        <strong>ℹ️ Verify Drop Zone Activity:</strong> Call or radio ATC / Operator to confirm if active.
-                      </div>
-                    );
-                  }
-                })()
-              )}
-              <div className="popup-desc" style={{ marginTop: '6px' }}>{pin.feature.properties?.raw_text}</div>
-            </Popup>
+            {!isMobile && (
+              <Popup maxWidth={800} minWidth={450}>
+                <div className="popup-title">{pin.feature.properties?.hazard_label || pin.feature.properties?.hazard_type}</div>
+                <div className="popup-meta">ID: <strong>{pin.feature.properties?.notam_id}</strong></div>
+                <div className="popup-meta" style={{ marginTop: '4px' }}>Vertical: <strong>{formatAltitudeValue(pin.feature.properties?.lower_fl, false)} - {formatAltitudeValue(pin.feature.properties?.upper_fl, true)}</strong></div>
+                {pin.feature.properties?.hazard_type === 'PARACHUTE' && (
+                  (() => {
+                    const txt = (pin.feature.properties?.raw_text || '').toUpperCase();
+                    const isUnknown = txt.includes('SUBJ') || txt.includes('ATC') || txt.includes('CALL') || txt.includes('NOTAM') || txt.includes('UNKNOWN') || txt.includes('VAR') || txt.includes('OPR') || txt.includes('AMDT') || txt.includes('EST');
+                    if (isUnknown) {
+                      return (
+                        <div style={{ background: 'rgba(239, 68, 68, 0.15)', borderLeft: '4px solid #ef4444', padding: '8px', marginTop: '10px', borderRadius: '4px', fontSize: '11px' }}>
+                          <strong>⚠️ Activity Times Unknown / Variable:</strong> Call or radio nearest ATC / Drop Zone Operator to confirm if active before entering.
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div style={{ background: 'rgba(56, 189, 248, 0.15)', borderLeft: '4px solid #38bdf8', padding: '8px', marginTop: '10px', borderRadius: '4px', fontSize: '11px' }}>
+                          <strong>ℹ️ Verify Drop Zone Activity:</strong> Call or radio ATC / Operator to confirm if active.
+                        </div>
+                      );
+                    }
+                  })()
+                )}
+                <div className="popup-desc" style={{ marginTop: '6px' }}>{pin.feature.properties?.raw_text}</div>
+              </Popup>
+            )}
           </Marker>
         ))}
+
+        {/* Planned Route Polyline */}
+        {waypoints.length > 1 && (
+          <Polyline
+            positions={waypoints}
+            color="#00ffff"
+            weight={3}
+            dashArray="8, 8"
+          />
+        )}
+
+        {/* Route Corridor Buffer Polygon */}
+        {corridorGeoJSON && (
+          <GeoJSON
+            key={JSON.stringify(corridorGeoJSON)}
+            data={corridorGeoJSON}
+            style={{
+              color: '#00ffff',
+              weight: 1.5,
+              fillColor: '#00ffff',
+              fillOpacity: 0.08,
+              dashArray: '4, 4'
+            }}
+          />
+        )}
+
+        {/* Sequential Task Waypoint Markers */}
+        {waypoints.map((pos, i) => {
+          const isStart = i === 0;
+          const isFinish = i === waypoints.length - 1 && waypoints.length > 1;
+          const label = isStart ? 'Start' : isFinish ? 'Finish' : `TP ${i}`;
+          
+          const createWpDivIcon = (num: number) => {
+            return L.divIcon({
+              className: 'task-waypoint-icon-container',
+              html: `<div class="task-waypoint-pin ${isStart ? 'start' : isFinish ? 'finish' : ''}">
+                      <span class="wp-number">${num}</span>
+                     </div>`,
+              iconSize: [22, 22],
+              iconAnchor: [11, 11]
+            });
+          };
+
+          return (
+            <Marker 
+              key={`wp-${i}`} 
+              position={pos}
+              icon={createWpDivIcon(i + 1)}
+            >
+              <Popup>
+                <strong>Waypoint {i + 1} ({label})</strong>
+                <div>{pos[0].toFixed(4)}N, {Math.abs(pos[1]).toFixed(4)}W</div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         {/* BGA Turnpoint Markers */}
         {layers.bgaTurnpoints && bgaTurnpoints?.features?.map((f: any, i: number) => {
@@ -330,12 +423,19 @@ export const NotamMap: React.FC<NotamMapProps> = ({
                 <div style={{ fontWeight: 'bold' }}>BGA Turnpoint: {f.properties.code}</div>
                 <div>{f.properties.name}</div>
                 <div>Elevation: {f.properties.elevation_ft} ft</div>
+                <button 
+                  className="action-btn"
+                  style={{ marginTop: '8px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                  onClick={() => onAddWaypoint([lat, lon])}
+                >
+                  ➕ Add to Task
+                </button>
               </Popup>
             </Marker>
           );
         })}
 
-        <MapPanController selectedNotam={selectedNotam} />
+        <MapPanController panToNotam={panToNotam} setPanToNotam={setPanToNotam} isMobile={isMobile} />
       </MapContainer>
     </div>
   );

@@ -281,6 +281,279 @@ body, html, #root {
 
 
 
+/* --- TASK PLANNER PANEL --- */
+.route-actions {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.route-mode-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.clear-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clear-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* Autocomplete search */
+.bga-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.bga-search-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.bga-search-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.bga-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1e2430;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 1010;
+  list-style: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  margin-top: 4px;
+  padding: 0;
+}
+
+.search-item {
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-item:hover {
+  background: rgba(0, 210, 255, 0.15);
+  color: var(--accent-blue);
+}
+
+/* Waypoints list */
+.waypoints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.waypoint-item-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.waypoint-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px;
+  gap: 8px;
+}
+
+.wp-index {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.wp-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.wp-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f1f5f9;
+}
+
+/* Waypoint roles */
+.wp-role-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  width: fit-content;
+}
+
+.start-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.finish-badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.tp-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.wp-item-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.arrow-btn, .delete-wp-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.arrow-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.delete-wp-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.leg-calculation-line {
+  font-size: 10px;
+  color: #10b981;
+  font-weight: 700;
+  padding-left: 24px;
+  margin: 4px 0;
+}
+
+/* Corridor slider & toggle */
+.corridor-slider-group {
+  margin-top: 10px;
+}
+
+.corridor-slider-group label {
+  font-size: 12px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.corridor-slider-group input {
+  width: 100%;
+  accent-color: var(--accent-cyan);
+}
+
+.corridor-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.route-hazard-alert {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.route-hazard-alert.warning {
+  background: rgba(255, 51, 68, 0.15);
+  border: 1px solid var(--accent-red);
+  color: #fca5a5;
+}
+
+.route-hazard-alert.safe {
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid #4ade80;
+  color: #86efac;
+}
+
+/* Map Waypoint Pins */
+.task-waypoint-icon-container {
+  background: none !important;
+  border: none !important;
+}
+
+.task-waypoint-pin {
+  width: 22px;
+  height: 22px;
+  background: #38bdf8; /* Blue default turnpoint */
+  border: 2px solid #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  font-family: inherit;
+  font-weight: bold;
+  color: #000;
+}
+
+.task-waypoint-pin.start {
+  background: #10b981; /* Green start */
+  color: #fff;
+}
+
+.task-waypoint-pin.finish {
+  background: #ef4444; /* Red finish */
+  color: #fff;
+}
+
+.wp-number {
+  font-size: 10px;
+  line-height: 1;
+}
+
 /* --- EXPORT BUTTON --- */
 .export-section {
   margin-top: auto;
@@ -393,8 +666,8 @@ body, html, #root {
 
 /* --- LEAFLET CUSTOM POPUPS --- */
 .leaflet-popup {
-  min-width: 380px !important;
-  max-width: 550px !important;
+  min-width: 450px !important;
+  max-width: 800px !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -464,4 +737,394 @@ body, html, #root {
   text-shadow: 1px 1px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000;
   margin-left: 4px;
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   Mobile Responsive Layout & Navigation Drawer Styles
+   ========================================================================== */
+
+/* General Mobile overrides */
+@media (max-width: 768px) {
+  .app-container.is-mobile {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Map occupies full screen */
+  .is-mobile .map-container {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+  }
+
+  /* Drawer starts hidden offscreen left */
+  .is-mobile .sidebar.mobile-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 340px;
+    min-width: 340px;
+    max-width: 85vw;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .is-mobile .sidebar.mobile-drawer.open {
+    transform: translateX(0);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Backdrop overlay */
+  .mobile-sidebar-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 14, 20, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1040;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* Close drawer button */
+  .close-drawer-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .close-drawer-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+
+  /* Mobile Tabs styling */
+  .mobile-tabs-header {
+    display: flex;
+    background: rgba(18, 21, 28, 0.95);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .mobile-tabs-header .tab-btn {
+    flex: 1;
+    padding: 12px 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: relative;
+  }
+
+  .mobile-tabs-header .tab-btn.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .mobile-tabs-header .tab-badge {
+    background: var(--accent-blue);
+    color: #000;
+    font-size: 9px;
+    font-weight: 800;
+    border-radius: 8px;
+    padding: 1px 5px;
+    min-width: 14px;
+    text-align: center;
+    line-height: 1.2;
+    display: inline-block;
+    margin-left: 4px;
+  }
+
+  .mobile-tabs-header .tab-badge.warning-badge {
+    background: var(--accent-orange);
+  }
+
+  .mobile-tab-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  /* Adjust leaflet zoom controls and layer credits placement on mobile */
+  .leaflet-top.leaflet-left {
+    top: 10px;
+  }
+  .leaflet-bottom.leaflet-right {
+    bottom: 80px; /* Above the FAB */
+  }
+
+  /* Collapse Export Buttons Accordion */
+  .mobile-export-accordion {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+
+  .mobile-export-accordion summary {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+  }
+
+  .mobile-export-accordion[open] summary {
+    color: var(--text-main);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Floating Action Button (FAB) */
+.mobile-fab {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1060;
+  padding: 12px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  background: linear-gradient(135deg, #00d2ff, #1d4ed8);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 210, 255, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 210, 255, 0.45);
+}
+
+.mobile-fab:active {
+  transform: translateY(1px);
+}
+
+.mobile-fab.active {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+}
+
+/* Mobile Bottom Sheet for Selected NOTAM Details */
+.mobile-bottom-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 48vh;
+  background: rgba(18, 22, 30, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px 16px 0 0;
+  z-index: 1030;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 10px auto 4px auto;
+  flex-shrink: 0;
+}
+
+.bottom-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 20px 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.bottom-sheet-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-blue);
+  line-height: 1.3;
+}
+
+.bottom-sheet-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.bottom-sheet-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.bottom-sheet-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.bottom-sheet-content {
+  padding: 16px 20px 24px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.bottom-sheet-content::-webkit-scrollbar {
+  width: 4px;
+}
+.bottom-sheet-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.bottom-sheet-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bottom-sheet-meta-grid .meta-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.bottom-sheet-meta-grid .meta-val {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.parachute-warning-box {
+  font-size: 11px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  line-height: 1.4;
+}
+
+.parachute-warning-box.warning {
+  background: rgba(239, 68, 68, 0.1);
+  border-left-color: #ef4444;
+  color: #fca5a5;
+}
+
+.parachute-warning-box.info {
+  background: rgba(56, 189, 248, 0.1);
+  border-left-color: #38bdf8;
+  color: #bae6fd;
+}
+
+.bottom-sheet-raw-text {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  max-height: 140px;
+  overflow-y: auto;
+  line-height: 1.45;
+}
+
+.bottom-sheet-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.bottom-sheet-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
