@@ -35,7 +35,7 @@ function App() {
     groundServices: true,
     aerodrome: true,
     other: true,
-    bgaTurnpoints: true
+    bgaTurnpoints: false
   });
   const [bgaTurnpoints, setBgaTurnpoints] = useState<any>(null);
   const [altitudeFloor, setAltitudeFloor] = useState<number>(0);
@@ -106,6 +106,13 @@ function App() {
       setCorridorResult(null);
     }
   }, [waypoints, corridorNm, altitudeFloor, altitudeCeiling]);
+
+  // 3. Automatically turn on BGA turnpoints layer when waypoints are active
+  useEffect(() => {
+    if (waypoints.length > 0 && !layers.bgaTurnpoints) {
+      setLayers(prev => ({ ...prev, bgaTurnpoints: true }));
+    }
+  }, [waypoints.length, layers.bgaTurnpoints]);
 
   const addWaypoint = (latlng: [number, number]) => {
     setWaypoints(prev => [...prev, latlng]);

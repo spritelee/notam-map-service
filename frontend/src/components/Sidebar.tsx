@@ -142,7 +142,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
           <button 
             className={`tab-btn ${activeTab === 'route' ? 'active' : ''}`}
-            onClick={() => setActiveTab('route')}
+            onClick={() => {
+              setActiveTab('route');
+              setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }));
+            }}
           >
             🛰️ Route
             {waypoints.length > 0 && <span className="tab-badge">{waypoints.length}</span>}
@@ -187,6 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               routeHazardsCount={routeHazardsCount}
               bgaTurnpoints={bgaTurnpoints}
               setWaypoints={setWaypoints}
+              onActivateTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }))}
             />
 
             <UnplaceableDrawer 
@@ -235,6 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 routeHazardsCount={routeHazardsCount}
                 bgaTurnpoints={bgaTurnpoints}
                 setWaypoints={setWaypoints}
+                onActivateTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }))}
               />
             )}
 

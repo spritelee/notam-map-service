@@ -11,6 +11,7 @@ interface TaskPlannerProps {
   routeHazardsCount: number;
   bgaTurnpoints: any; // GeoJSON FeatureCollection
   setWaypoints: React.Dispatch<React.SetStateAction<[number, number][]>>;
+  onActivateTurnpoints?: () => void;
 }
 
 const getDistanceNM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -48,7 +49,8 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
   setIsCorridorFilterActive,
   routeHazardsCount,
   bgaTurnpoints,
-  setWaypoints
+  setWaypoints,
+  onActivateTurnpoints
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -138,6 +140,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
           placeholder="Search BGA turnpoint or GA airfield..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={onActivateTurnpoints}
           className="bga-search-input"
         />
         {searchResults.length > 0 && (
