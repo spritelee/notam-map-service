@@ -570,7 +570,7 @@ function App() {
                   <strong>🔒 Safety Enhancement - Unplaceable Notices:</strong> Many aviation apps silently discard NOTAMs that cannot be mapped due to coordinate errors. This tool isolates them under the <strong>Unplaceable Notices</strong> panel. You must review the Unplaceable list manually before flight to ensure no critical hazards are missed.
                 </div>
                 <div className="disclaimer-gdpr-box">
-                  <strong>🇪🇺 GDPR & Privacy Notice:</strong> This application does not use cookies for tracking, analytics, or marketing. We use your browser's local storage solely to retain your local task synchronizer credentials (API keys/tokens) so you don't have to re-enter them. This data stays entirely in your browser and is never sent to our servers.
+                  <strong>🇪🇺 GDPR & Privacy Notice:</strong> This application does not use cookies for tracking, analytics, or marketing. We use your browser's local storage solely to retain your local task synchronizer credentials (API keys/tokens) for your convenience. When syncing, credentials and task details are transmitted securely via HTTPS through our backend server solely to proxy requests to third-party services (WeGlide, Google Drive, Dropbox). Credentials are processed statelessly and are never stored, saved, or logged on our servers.
                 </div>
                 <div>
                   By clicking <strong>Accept and Continue</strong> below, you acknowledge and agree that you use this software at your own risk, that it is for supplemental use only, and that you will verify all information with official AIS sources.
