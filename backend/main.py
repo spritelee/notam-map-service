@@ -142,15 +142,17 @@ async def get_cached_notams() -> dict:
                         
             strtree = STRtree(geometries) if geometries else None
             
+            geojson_data.setdefault("meta", {})["feed_degraded"] = False
             CACHE["data"] = geojson_data
             CACHE["strtree"] = strtree
             CACHE["geometries"] = geometries
             CACHE["feature_map"] = feature_map
             CACHE["timestamp"] = now
         except Exception as e:
-            logger.error(f"Failed to fetch live NATS feed: {e}")
+            logger.error(f"Failed to fetch live NOTAM feed: {e}")
             if CACHE["data"] is None:
                 raise HTTPException(status_code=503, detail="Unable to retrieve NOTAM data feed.")
+            CACHE["data"].setdefault("meta", {})["feed_degraded"] = True
     return CACHE["data"]
 
 class RouteRequest(BaseModel):

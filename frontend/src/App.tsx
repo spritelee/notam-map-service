@@ -581,7 +581,7 @@ function App() {
                 {isLoading ? (
                   <div className="status-indicator">
                     <div className="status-spinner"></div>
-                    <span style={{ marginLeft: '6px' }}>Syncing NATS feed...</span>
+                    <span style={{ marginLeft: '6px' }}>Syncing aeronautical feed...</span>
                   </div>
                 ) : (
                   <div className="status-indicator ready">

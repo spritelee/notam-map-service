@@ -21,6 +21,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <p style={{ margin: '4px 0 8px 0' }}>
               This visualization workstation is an unofficial tool and is <strong>NOT</strong> a replacement for an official aeronautical briefing. Under the UK Air Navigation Order, the Pilot-in-Command (PIC) retains sole, non-delegable responsibility for the safe conduct of the flight. Always cross-reference your flight planning with the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
             </p>
+            <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#94a3b8' }}>
+              <strong>Trademark & Data Attribution:</strong> Independent software tool. Not affiliated with, endorsed by, or sponsored by NATS (National Air Traffic Services). NOTAM data sourced from public NATS AIS Pre-flight Information Bulletins.
+            </p>
             <strong>🔒 Safety Improvement - Unplaceable Notices:</strong>
             <p style={{ margin: '4px 0 0 0' }}>
               Unlike other platforms that silently omit notices without valid spatial coordinates, this tool isolates them in the <strong>Unplaceable Notices</strong> panel. You <strong>MUST</strong> check the Unplaceable list manually to ensure no critical hazards are missed.

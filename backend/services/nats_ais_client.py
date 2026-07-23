@@ -121,10 +121,13 @@ def _notam_from_element(el: ET.Element) -> RawNotam:
     )
 
 
-def parse_pib_xml(xml_bytes: bytes | str) -> list[RawNotam]:
+def parse_pib_xml(xml_bytes: bytes | str, validate: bool = True, min_count: int = 100) -> list[RawNotam]:
     """Parse a full NATS PIB XML document into RawNotam records."""
     root = ET.fromstring(xml_bytes)
-    return [_notam_from_element(el) for el in root.iter("Notam")]
+    notams = [_notam_from_element(el) for el in root.iter("Notam")]
+    if validate and len(notams) < min_count:
+        raise ValueError(f"NATS PIB feed validation failed: parsed {len(notams)} NOTAMs, expected at least {min_count}.")
+    return notams
 
 
 class NatsAisClient:

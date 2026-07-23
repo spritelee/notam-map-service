@@ -131,6 +131,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div style={{ marginBottom: '6px' }}>
         Unofficial tool for supplemental situational awareness only. Always verify all NOTAMs against the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
       </div>
+      <div style={{ marginBottom: '6px', fontSize: '11px', color: '#94a3b8' }}>
+        Independent software tool. Not affiliated with, endorsed by, or sponsored by NATS (National Air Traffic Services). NOTAM data sourced from public NATS AIS Pre-flight Information Bulletins.
+      </div>
       <div>
         <strong>🔒 Safety Feature:</strong> Notices with invalid coordinates are isolated under the <em>Unplaceable</em> tab instead of being silently ignored. Check these manually.
       </div>
@@ -157,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
           <div className="live-status-pill" style={{ marginTop: 0 }}>
-            <span className="dot"></span> NATS UK Live Feed ({visibleNotamsCount} / {totalNotamsCount})
+            <span className="dot"></span> UK Aeronautical Feed ({visibleNotamsCount} / {totalNotamsCount})
           </div>
           <button className="user-guide-link-btn" onClick={onOpenGuide} title="View Workstation User Guide">
             📖 Guide

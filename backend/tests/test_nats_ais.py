@@ -71,3 +71,10 @@ def test_classification_covers_glider_hazards(notams):
     assert "OBSTACLE" in kinds
     assert "UAS" in kinds
     print("\nhazard type distribution:", dict(sorted(kinds.items(), key=lambda x: -x[1])))
+
+
+def test_feed_validation_rejects_empty_or_corrupted_payload():
+    invalid_xml = "<PIB><Notam><Series>A</Series></Notam></PIB>"
+    with pytest.raises(ValueError, match="NATS PIB feed validation failed"):
+        nats.parse_pib_xml(invalid_xml, validate=True, min_count=100)
+
