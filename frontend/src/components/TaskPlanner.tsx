@@ -257,7 +257,18 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                     </div>
                     <div className="wp-item-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                       <button 
-                        onClick={() => setExpandedIndex(prev => prev === index ? null : index)} 
+                        onClick={(e) => {
+                          const isExpanding = expandedIndex !== index;
+                          setExpandedIndex(isExpanding ? index : null);
+                          if (isExpanding) {
+                            setTimeout(() => {
+                              const el = e.currentTarget.closest('.waypoint-item-container');
+                              if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                              }
+                            }, 50);
+                          }
+                        }} 
                         title="Configure Observation Zone"
                         className="arrow-btn"
                         style={{ color: expandedIndex === index ? 'var(--accent-color)' : 'inherit', border: expandedIndex === index ? '1px solid var(--accent-color)' : '1px solid transparent', borderRadius: '3px' }}
