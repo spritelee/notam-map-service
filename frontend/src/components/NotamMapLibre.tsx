@@ -378,7 +378,6 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       id: 'notam-polygons-fill',
       type: 'fill',
       source: 'notam-polygons',
-      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'MultiPolygon']],
       paint: {
         'fill-color': ['coalesce', ['get', 'fillColor'], '#38bdf8'],
         'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0.15]
@@ -390,7 +389,6 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       id: 'notam-polygons-outline',
       type: 'line',
       source: 'notam-polygons',
-      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'MultiPolygon'], ['==', '$type', 'LineString']],
       paint: {
         'line-color': ['coalesce', ['get', 'strokeColor'], '#38bdf8'],
         'line-width': ['coalesce', ['get', 'strokeWeight'], 2]
@@ -436,7 +434,6 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       id: 'oz-fill',
       type: 'fill',
       source: 'observation-zones',
-      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'MultiPolygon']],
       paint: {
         'fill-color': '#00ffff',
         'fill-opacity': 0.08
