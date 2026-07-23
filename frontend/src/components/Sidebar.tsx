@@ -129,10 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ⚠️ UK Flight Safety Notice & Disclaimer
       </div>
       <div style={{ marginBottom: '6px' }}>
-        Unofficial tool for supplemental situational awareness only. Always verify all NOTAMs against the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
-      </div>
-      <div style={{ marginBottom: '6px', fontSize: '11px', color: '#94a3b8' }}>
-        Independent software tool. Not affiliated with, endorsed by, or sponsored by NATS (National Air Traffic Services). NOTAM data sourced from public NATS AIS Pre-flight Information Bulletins.
+        Unofficial tool for supplemental situational awareness only. Always verify all NOTAMs against the official <strong>UK AIS Portal (PIB)</strong> before takeoff.
       </div>
       <div>
         <strong>🔒 Safety Feature:</strong> Notices with invalid coordinates are isolated under the <em>Unplaceable</em> tab instead of being silently ignored. Check these manually.

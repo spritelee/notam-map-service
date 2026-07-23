@@ -564,7 +564,7 @@ function App() {
               </div>
               <div className="disclaimer-body">
                 <div className="disclaimer-notice-box">
-                  <strong>Non-Delegable Responsibility:</strong> Under the UK Air Navigation Order, the Pilot-in-Command (PIC) has sole, non-delegable responsibility for flight safety. This application is an unofficial visualization tool for supplemental situational awareness only and is <strong>NOT</strong> a replacement for an official pre-flight briefing. Always check the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
+                  <strong>Non-Delegable Responsibility:</strong> Under the UK Air Navigation Order, the Pilot-in-Command (PIC) has sole, non-delegable responsibility for flight safety. This application is an unofficial visualization tool for supplemental situational awareness only and is <strong>NOT</strong> a replacement for an official pre-flight briefing. Always check the official <strong>UK AIS Portal (PIB)</strong> before takeoff.
                 </div>
                 <div>
                   <strong>🔒 Safety Enhancement - Unplaceable Notices:</strong> Many aviation apps silently discard NOTAMs that cannot be mapped due to coordinate errors. This tool isolates them under the <strong>Unplaceable Notices</strong> panel. You must review the Unplaceable list manually before flight to ensure no critical hazards are missed.
@@ -622,13 +622,13 @@ function App() {
               </div>
               <div className="disclaimer-actions" style={{ flexDirection: 'column' }}>
                 <a 
-                  href="https://www.nats.aero/services/information-services/ais/"
+                  href="https://www.eais.nats.co.uk/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="disclaimer-btn primary-action"
                   style={{ textDecoration: 'none' }}
                 >
-                  Go to NATS AIS Portal ↗
+                  Go to Official UK AIS Portal ↗
                 </a>
                 <button 
                   className="disclaimer-btn reject" 
