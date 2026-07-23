@@ -358,7 +358,7 @@ def generate_cup_task(waypoints: List[List[float]], bga_features: list, observat
             is_finish = idx == len(waypoints) - 1 and len(waypoints) > 1
             observation_zones.append({
                 "type": "Line" if (is_start or is_finish) else "Sector",
-                "radius": 5000 if is_start else (1000 if is_finish else 2000),
+                "radius": 5000 if is_start else (1000 if is_finish else 10000),
                 "angle": 90.0
             })
 
@@ -408,7 +408,7 @@ def generate_tsk_task(waypoints: List[List[float]], bga_features: list, observat
             is_finish = idx == len(waypoints) - 1 and len(waypoints) > 1
             observation_zones.append({
                 "type": "Line" if (is_start or is_finish) else "Sector",
-                "radius": 5000 if is_start else (1000 if is_finish else 2000),
+                "radius": 5000 if is_start else (1000 if is_finish else 10000),
                 "angle": 90.0
             })
 

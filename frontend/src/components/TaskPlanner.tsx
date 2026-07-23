@@ -84,7 +84,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
       }
       for (let i = 1; i < nextZones.length - 1; i++) {
         if (nextZones[i].type === 'Line') {
-          nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 2000, angle: 90 };
+          nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 10000, angle: 90 };
         }
       }
       return nextZones;
@@ -119,7 +119,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
       // Re-evaluate any middle point that might have been a start/finish
       for (let i = 1; i < nextZones.length - 1; i++) {
         if (nextZones[i].type === 'Line') {
-          nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 2000, angle: 90 };
+          nextZones[i] = { ...nextZones[i], type: 'Sector', radius: 10000, angle: 90 };
         }
       }
       return nextZones;
@@ -280,7 +280,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                                 next[index] = {
                                   ...next[index],
                                   type: newType,
-                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Sector' ? 2000 : (newType === 'Keyhole' ? 10000 : 500))
+                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Sector' ? 10000 : (newType === 'Keyhole' ? 10000 : 500))
                                 };
                                 return next;
                               });

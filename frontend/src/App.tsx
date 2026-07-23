@@ -135,7 +135,7 @@ function App() {
         if (prevFinishIdx > 0) { // i.e. it's not the start point
           nextZones[prevFinishIdx] = {
             type: 'Sector',
-            radius: 2000,
+            radius: 10000,
             angle: 90
           };
         }
