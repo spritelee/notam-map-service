@@ -54,6 +54,11 @@ function App() {
 
   // Task Planner State
   const [waypoints, setWaypoints] = useState<[number, number][]>([]); // [lat, lng]
+  const [observationZones, setObservationZones] = useState<{
+    type: 'Cylinder' | 'Sector' | 'Line' | 'Keyhole';
+    radius: number; // meters
+    angle: number; // degrees
+  }[]>([]);
   const [corridorNm, setCorridorNm] = useState<number>(20); // 20 NM default
   const [isCorridorFilterActive, setIsCorridorFilterActive] = useState<boolean>(false);
   const [corridorResult, setCorridorResult] = useState<any>(null);
@@ -116,13 +121,36 @@ function App() {
 
   const addWaypoint = (latlng: [number, number]) => {
     setWaypoints(prev => [...prev, latlng]);
+    setObservationZones(prev => {
+      const isStart = prev.length === 0;
+      const defaultOz = {
+        type: isStart ? ('Line' as const) : ('Line' as const),
+        radius: isStart ? 5000 : 1000,
+        angle: 90
+      };
+      
+      const nextZones = [...prev];
+      if (nextZones.length > 0) {
+        const prevFinishIdx = nextZones.length - 1;
+        if (prevFinishIdx > 0) { // i.e. it's not the start point
+          nextZones[prevFinishIdx] = {
+            type: 'Cylinder',
+            radius: 500,
+            angle: 90
+          };
+        }
+      }
+      return [...nextZones, defaultOz];
+    });
   };
 
   const clearRoute = () => {
     setWaypoints([]);
+    setObservationZones([]);
     setIsCorridorFilterActive(false);
     setCorridorResult(null);
   };
+
 
 
 
@@ -409,6 +437,8 @@ function App() {
         bgaTurnpoints={bgaTurnpoints}
         setWaypoints={setWaypoints}
         routeHazardsCount={corridorResult?.meta?.total_route_hazards || 0}
+        observationZones={observationZones}
+        setObservationZones={setObservationZones}
         
         // Mobile Layout Support
         isMobile={isMobile}
@@ -429,6 +459,7 @@ function App() {
         waypoints={waypoints}
         onAddWaypoint={addWaypoint}
         corridorGeoJSON={corridorResult?.corridor_geometry || null}
+        observationZones={observationZones}
         
         // Mobile and Double-Click Fix
         isMobile={isMobile}

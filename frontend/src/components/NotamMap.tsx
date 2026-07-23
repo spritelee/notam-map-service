@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, Polyline, Circle, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import type { FeatureCollection } from 'geojson';
 
@@ -13,6 +13,7 @@ interface NotamMapProps {
   waypoints: [number, number][];
   onAddWaypoint: (latlng: [number, number]) => void;
   corridorGeoJSON: any;
+  observationZones: any[];
 
   // Mobile layout and double-click fix props
   isMobile: boolean;
@@ -138,6 +139,7 @@ export const NotamMap: React.FC<NotamMapProps> = ({
   waypoints,
   onAddWaypoint,
   corridorGeoJSON,
+  observationZones,
 
   isMobile,
   panToNotam,
@@ -376,6 +378,125 @@ export const NotamMap: React.FC<NotamMapProps> = ({
             }}
           />
         )}
+
+        {/* Task Turnpoint Observation Zones */}
+        {waypoints.map((pos, idx) => {
+          const oz = observationZones && observationZones[idx];
+          if (!oz) return null;
+          
+          const type = oz.type;
+          const radius = oz.radius;
+          const angle = oz.angle || 90;
+          
+          if (type === 'Cylinder') {
+            return (
+              <Circle
+                key={`oz-cyl-${idx}`}
+                center={pos}
+                radius={radius}
+                pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.08, weight: 1.2 }}
+              />
+            );
+          }
+          
+          if (type === 'Line') {
+            let heading = 0;
+            if (idx === 0 && waypoints.length > 1) {
+              const next = waypoints[1];
+              heading = Math.atan2(next[1] - pos[1], next[0] - pos[0]) + Math.PI / 2;
+            } else if (idx === waypoints.length - 1 && waypoints.length > 1) {
+              const prev = waypoints[waypoints.length - 2];
+              heading = Math.atan2(pos[1] - prev[1], pos[0] - prev[0]) + Math.PI / 2;
+            } else if (waypoints.length > 1) {
+              const prev = waypoints[idx - 1];
+              heading = Math.atan2(pos[1] - prev[1], pos[0] - prev[0]) + Math.PI / 2;
+            }
+            
+            const cosLat = Math.cos((pos[0] * Math.PI) / 180);
+            const latOffset = (radius * Math.cos(heading)) / 111111;
+            const lngOffset = (radius * Math.sin(heading)) / (111111 * cosLat);
+            
+            const pt1: [number, number] = [pos[0] - latOffset, pos[1] - lngOffset];
+            const pt2: [number, number] = [pos[0] + latOffset, pos[1] + lngOffset];
+            
+            return (
+              <Polyline
+                key={`oz-line-${idx}`}
+                positions={[pt1, pt2]}
+                color="#00ffff"
+                weight={2}
+              />
+            );
+          }
+          
+          if (type === 'Sector' || type === 'Keyhole') {
+            let heading = 0;
+            if (idx > 0 && idx < waypoints.length - 1) {
+              const prev = waypoints[idx - 1];
+              const next = waypoints[idx + 1];
+              
+              const dy1 = pos[0] - prev[0];
+              const dx1 = pos[1] - prev[1];
+              const len1 = Math.hypot(dy1, dx1) || 1;
+              const ny1 = dy1 / len1;
+              const nx1 = dx1 / len1;
+
+              const dy2 = next[0] - pos[0];
+              const dx2 = next[1] - pos[1];
+              const len2 = Math.hypot(dy2, dx2) || 1;
+              const ny2 = dy2 / len2;
+              const nx2 = dx2 / len2;
+
+              let by = -(ny1 + ny2);
+              let bx = -(nx1 + nx2);
+              if (Math.hypot(by, bx) < 0.001) {
+                by = -nx1;
+                bx = ny1;
+              }
+              heading = Math.atan2(bx, by);
+            } else if (idx === 0 && waypoints.length > 1) {
+              const next = waypoints[1];
+              heading = Math.atan2(pos[1] - next[1], pos[0] - next[0]);
+            } else if (idx === waypoints.length - 1 && waypoints.length > 1) {
+              const prev = waypoints[waypoints.length - 2];
+              heading = Math.atan2(pos[1] - prev[1], pos[0] - prev[0]);
+            }
+            
+            const cosLat = Math.cos((pos[0] * Math.PI) / 180);
+            const vertices: [number, number][] = [pos];
+            
+            const startAngle = heading - (angle * Math.PI) / 360;
+            const endAngle = heading + (angle * Math.PI) / 360;
+            
+            const steps = 12;
+            for (let s = 0; s <= steps; s++) {
+              const a = startAngle + (s * (endAngle - startAngle)) / steps;
+              const latOffset = (radius * Math.cos(a)) / 111111;
+              const lngOffset = (radius * Math.sin(a)) / (111111 * cosLat);
+              vertices.push([pos[0] + latOffset, pos[1] + lngOffset]);
+            }
+            
+            vertices.push(pos);
+            
+            return (
+              <React.Fragment key={`oz-sect-grp-${idx}`}>
+                <Polygon
+                  positions={vertices}
+                  pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.08, weight: 1.2 }}
+                />
+                {type === 'Keyhole' && (
+                  <Circle
+                    center={pos}
+                    radius={500}
+                    pathOptions={{ color: '#00ffff', fillColor: '#00ffff', fillOpacity: 0.15, weight: 1.2 }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          }
+          
+          return null;
+        })}
 
         {/* Sequential Task Waypoint Markers */}
         {waypoints.map((pos, i) => {

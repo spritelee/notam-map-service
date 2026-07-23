@@ -70,11 +70,18 @@ def test_generate_cup_task():
         }
     ]
     
-    cup = generate_cup_task(waypoints, bga_features)
+    obs_zones = [
+        {"type": "Line", "radius": 5000, "angle": 180},
+        {"type": "Sector", "radius": 20000, "angle": 90}
+    ]
+    
+    cup = generate_cup_task(waypoints, bga_features, obs_zones)
     assert "name,code,country,lat,lon" in cup
     assert "__Tasks__" in cup
     assert '"LSH Lasham Airfield"' in cup
     assert '"XYZ Test Turnpoint"' in cup
+    assert "ObsZone=0,Style=2,R1=5000m,A1=180,Line=1" in cup
+    assert "ObsZone=1,Style=1,R1=20000m,A1=90" in cup
 
 def test_generate_tsk_task():
     waypoints = [
@@ -94,10 +101,17 @@ def test_generate_tsk_task():
         }
     ]
     
-    tsk = generate_tsk_task(waypoints, bga_features)
+    obs_zones = [
+        {"type": "Line", "radius": 5000, "angle": 180},
+        {"type": "Sector", "radius": 20000, "angle": 90}
+    ]
+    
+    tsk = generate_tsk_task(waypoints, bga_features, obs_zones)
     assert "<Task type=\"RT\"" in tsk
     assert "latitude=\"51.18560\"" in tsk
     assert "longitude=\"-1.03220\"" in tsk
+    assert '<ObservationZone type="Line" radius="5000" />' in tsk
+    assert '<ObservationZone type="Sector" radius="20000" angle="90" />' in tsk
 
 def test_api_task_share_lifecycle(client):
     # 1. Share a task
@@ -106,7 +120,11 @@ def test_api_task_share_lifecycle(client):
             [-1.0322, 51.1856],
             [-1.5000, 52.0000]
         ],
-        "corridor_nm": 15.0
+        "corridor_nm": 15.0,
+        "observation_zones": [
+            {"type": "Line", "radius": 5000, "angle": 180},
+            {"type": "Sector", "radius": 20000, "angle": 90}
+        ]
     }
     resp = client.post("/api/task/share", json=payload)
     assert resp.status_code == 200
@@ -122,16 +140,25 @@ def test_api_task_share_lifecycle(client):
     assert get_data["share_id"] == share_id
     assert get_data["corridor_nm"] == 15.0
     assert len(get_data["waypoints"]) == 2
+    assert get_data["observation_zones"] is not None
+    assert get_data["observation_zones"][0]["type"] == "Line"
+    assert get_data["observation_zones"][0]["radius"] == 5000
+    assert get_data["observation_zones"][1]["type"] == "Sector"
+    assert get_data["observation_zones"][1]["radius"] == 20000
     
     # 3. Get CUP download
     resp_cup = client.get(f"/api/task/share/{share_id}/cup")
     assert resp_cup.status_code == 200
     assert "name,code,country,lat,lon" in resp_cup.text
+    assert "ObsZone=0,Style=2,R1=5000m,A1=180,Line=1" in resp_cup.text
+    assert "ObsZone=1,Style=1,R1=20000m,A1=90" in resp_cup.text
     
     # 4. Get TSK download
     resp_tsk = client.get(f"/api/task/share/{share_id}/tsk")
     assert resp_tsk.status_code == 200
     assert "<Task type=" in resp_tsk.text
+    assert '<ObservationZone type="Line" radius="5000" />' in resp_tsk.text
+    assert '<ObservationZone type="Sector" radius="20000" angle="90" />' in resp_tsk.text
     
     # 5. Get OpenAir download
     resp_air = client.get(f"/api/task/share/{share_id}/openair")
@@ -163,6 +190,10 @@ def test_api_sync_cloud_drive_mock(client):
         "corridor_nm": 10.0,
         "provider": "dropbox",
         "access_token": "dummy_token",
+        "observation_zones": [
+            {"type": "Line", "radius": 5000, "angle": 180},
+            {"type": "Sector", "radius": 20000, "angle": 90}
+        ],
         "mock": True
     }
     resp = client.post("/api/sync/cloud-drive", json=payload)

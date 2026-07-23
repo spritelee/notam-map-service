@@ -41,9 +41,15 @@ async def startup_event():
 
 
 # Pydantic models for Sync & Share
+class ObservationZoneConfig(BaseModel):
+    type: str  # "Cylinder", "Sector", "Line", "Keyhole"
+    radius: float  # in meters
+    angle: Optional[float] = 90.0
+
 class TaskShareRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
     corridor_nm: float = Field(20.0, le=100.0)
+    observation_zones: Optional[List[ObservationZoneConfig]] = None
 
 class WeGlideSyncRequest(BaseModel):
     waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
@@ -57,7 +63,9 @@ class CloudDriveSyncRequest(BaseModel):
     corridor_nm: float = Field(20.0, le=100.0)
     provider: str # "google_drive" or "dropbox"
     access_token: str
+    observation_zones: Optional[List[ObservationZoneConfig]] = None
     mock: bool = False
+
 
 
 # Tightened CORS origins
@@ -309,7 +317,7 @@ async def export_task_igc(req: TaskExportRequest):
         headers={"Content-Disposition": "attachment; filename=task.igc"}
     )
 
-def generate_cup_task(waypoints: List[List[float]], bga_features: list) -> str:
+def generate_cup_task(waypoints: List[List[float]], bga_features: list, observation_zones: Optional[List[dict]] = None) -> str:
     lines = ["name,code,country,lat,lon,elev,style,rwdir,rwlen,rwdsth,freq,desc"]
     wp_names = []
     for idx, pt in enumerate(waypoints):
@@ -333,11 +341,68 @@ def generate_cup_task(waypoints: List[List[float]], bga_features: list) -> str:
     lines.append("__Tasks__")
     task_line = f'"NOTAM Task",' + ",".join(f'"{n}"' for n in wp_names)
     lines.append(task_line)
+
+    if not observation_zones:
+        observation_zones = []
+        for idx in range(len(waypoints)):
+            is_start = idx == 0
+            is_finish = idx == len(waypoints) - 1 and len(waypoints) > 1
+            observation_zones.append({
+                "type": "Line" if (is_start or is_finish) else "Cylinder",
+                "radius": 5000 if is_start else (1000 if is_finish else 500),
+                "angle": 90.0
+            })
+
+    for idx, oz in enumerate(observation_zones):
+        if idx >= len(waypoints):
+            break
+        oz_type = oz.get("type", "Cylinder")
+        radius = oz.get("radius", 500.0)
+        angle = oz.get("angle", 90.0)
+        
+        # Style mappings: 0=Cylinder, 1=Symmetrical (sector), 2=To next point (start line), 3=To prev point (finish line)
+        if oz_type == "Line":
+            style = 2 if idx == 0 else 3
+            line_flag = 1
+        elif oz_type in ("Sector", "Keyhole"):
+            style = 1
+            line_flag = 0
+        else: # Cylinder
+            style = 0
+            line_flag = 0
+
+        r1_str = f"{int(radius)}m"
+        a1_str = f"{int(angle)}"
+
+        if oz_type == "Keyhole":
+            r2_str = "500m"
+            a2_str = "180"
+            lines.append(f"ObsZone={idx},Style={style},R1={r1_str},A1={a1_str},R2={r2_str},A2={a2_str}")
+        else:
+            if oz_type == "Line":
+                lines.append(f"ObsZone={idx},Style={style},R1={r1_str},A1={a1_str},Line={line_flag}")
+            elif oz_type == "Sector":
+                lines.append(f"ObsZone={idx},Style={style},R1={r1_str},A1={a1_str}")
+            else: # Cylinder
+                lines.append(f"ObsZone={idx},Style={style},R1={r1_str}")
+
     return "\r\n".join(lines) + "\r\n"
 
-def generate_tsk_task(waypoints: List[List[float]], bga_features: list) -> str:
+def generate_tsk_task(waypoints: List[List[float]], bga_features: list, observation_zones: Optional[List[dict]] = None) -> str:
     import xml.etree.ElementTree as ET
     root = ET.Element("Task", type="RT", task_speed="0", aat_min_time="0")
+    
+    if not observation_zones:
+        observation_zones = []
+        for idx in range(len(waypoints)):
+            is_start = idx == 0
+            is_finish = idx == len(waypoints) - 1 and len(waypoints) > 1
+            observation_zones.append({
+                "type": "Line" if (is_start or is_finish) else "Cylinder",
+                "radius": 5000 if is_start else (1000 if is_finish else 500),
+                "angle": 90.0
+            })
+
     for idx, pt in enumerate(waypoints):
         lon, lat = pt[0], pt[1]
         name = find_closest_turnpoint_name(lon, lat, bga_features)
@@ -347,12 +412,19 @@ def generate_tsk_task(waypoints: List[List[float]], bga_features: list) -> str:
         wp_el = ET.SubElement(point_el, "Waypoint", name=name, comment="", id=str(idx))
         ET.SubElement(wp_el, "Location", latitude=f"{lat:.5f}", longitude=f"{lon:.5f}")
         
-        if pt_type == "Start":
-            ET.SubElement(point_el, "ObservationZone", type="Line", radius="5000")
-        elif pt_type == "Finish":
-            ET.SubElement(point_el, "ObservationZone", type="Circle", radius="1000")
-        else:
-            ET.SubElement(point_el, "ObservationZone", type="Circle", radius="500")
+        oz = observation_zones[idx] if idx < len(observation_zones) else {"type": "Cylinder", "radius": 500.0, "angle": 90.0}
+        oz_type = oz.get("type", "Cylinder")
+        radius = oz.get("radius", 500.0)
+        angle = oz.get("angle", 90.0)
+        
+        if oz_type == "Line":
+            ET.SubElement(point_el, "ObservationZone", type="Line", radius=str(int(radius)))
+        elif oz_type == "Sector":
+            ET.SubElement(point_el, "ObservationZone", type="Sector", radius=str(int(radius)), angle=str(int(angle)))
+        elif oz_type == "Keyhole":
+            ET.SubElement(point_el, "ObservationZone", type="Keyhole", radius=str(int(radius)), radius_inner="500", angle=str(int(angle)))
+        else: # Cylinder / Circle
+            ET.SubElement(point_el, "ObservationZone", type="Circle", radius=str(int(radius)))
             
     return ET.tostring(root, encoding="utf-8").decode("utf-8")
 
@@ -376,6 +448,7 @@ async def share_task(req: TaskShareRequest):
         "id": share_id,
         "waypoints": json.dumps(req.waypoints),
         "corridor_nm": req.corridor_nm,
+        "observation_zones": json.dumps([oz.model_dump() for oz in req.observation_zones]) if req.observation_zones else None,
         "created_at": firestore.SERVER_TIMESTAMP
     })
     
@@ -396,6 +469,7 @@ async def get_shared_task(share_id: str):
         "share_id": shared["id"],
         "waypoints": json.loads(shared["waypoints"]),
         "corridor_nm": shared["corridor_nm"],
+        "observation_zones": json.loads(shared.get("observation_zones")) if shared.get("observation_zones") else None,
         "created_at": shared["created_at"].isoformat() if hasattr(shared["created_at"], "isoformat") else str(shared["created_at"])
     }
 
@@ -408,11 +482,13 @@ async def get_shared_task_cup(share_id: str):
     
     shared = doc.to_dict()
     waypoints = json.loads(shared["waypoints"])
+    obs_zones = json.loads(shared.get("observation_zones")) if shared.get("observation_zones") else None
+    
     if BGA_CACHE["data"] is None:
         BGA_CACHE["data"] = await get_bga_turnpoints()
     bga_features = BGA_CACHE["data"].get("features", [])
     
-    cup_content = generate_cup_task(waypoints, bga_features)
+    cup_content = generate_cup_task(waypoints, bga_features, obs_zones)
     return PlainTextResponse(
         content=cup_content,
         headers={"Content-Disposition": f"attachment; filename=task_{share_id}.cup"}
@@ -427,11 +503,13 @@ async def get_shared_task_tsk(share_id: str):
     
     shared = doc.to_dict()
     waypoints = json.loads(shared["waypoints"])
+    obs_zones = json.loads(shared.get("observation_zones")) if shared.get("observation_zones") else None
+    
     if BGA_CACHE["data"] is None:
         BGA_CACHE["data"] = await get_bga_turnpoints()
     bga_features = BGA_CACHE["data"].get("features", [])
     
-    tsk_content = generate_tsk_task(waypoints, bga_features)
+    tsk_content = generate_tsk_task(waypoints, bga_features, obs_zones)
     return PlainTextResponse(
         content=tsk_content,
         headers={"Content-Disposition": f"attachment; filename=task_{share_id}.tsk", "Content-Type": "application/xml"}
@@ -547,7 +625,8 @@ async def sync_cloud_drive(req: CloudDriveSyncRequest):
         BGA_CACHE["data"] = await get_bga_turnpoints()
     bga_features = BGA_CACHE["data"].get("features", [])
     
-    cup_content = generate_cup_task(req.waypoints, bga_features)
+    obs_zones = [oz.model_dump() for oz in req.observation_zones] if req.observation_zones else None
+    cup_content = generate_cup_task(req.waypoints, bga_features, obs_zones)
     
     buffer_deg = req.corridor_nm * 0.016667
     route_line = LineString(req.waypoints)

@@ -12,6 +12,8 @@ interface TaskPlannerProps {
   bgaTurnpoints: any; // GeoJSON FeatureCollection
   setWaypoints: React.Dispatch<React.SetStateAction<[number, number][]>>;
   onActivateTurnpoints?: () => void;
+  observationZones: any[];
+  setObservationZones: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const getDistanceNM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -50,9 +52,12 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
   routeHazardsCount,
   bgaTurnpoints,
   setWaypoints,
-  onActivateTurnpoints
+  onActivateTurnpoints,
+  observationZones,
+  setObservationZones
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const getWaypointLabel = (lat: number, lng: number) => {
     const match = bgaTurnpoints?.features?.find((f: any) => {
@@ -68,18 +73,51 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
 
   const deleteWaypoint = (index: number) => {
     setWaypoints(prev => prev.filter((_, idx) => idx !== index));
+    setObservationZones(prev => {
+      const nextZones = prev.filter((_, idx) => idx !== index);
+      // Re-evaluate start/finish types
+      if (nextZones.length > 0) {
+        nextZones[0] = { ...nextZones[0], type: 'Line', radius: 5000 };
+      }
+      if (nextZones.length > 1) {
+        nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Line', radius: 1000 };
+      }
+      return nextZones;
+    });
   };
 
   const moveWaypoint = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
     setWaypoints(prev => {
       const nextList = [...prev];
-      const targetIdx = direction === 'up' ? index - 1 : index + 1;
       if (targetIdx >= 0 && targetIdx < nextList.length) {
         const temp = nextList[index];
         nextList[index] = nextList[targetIdx];
         nextList[targetIdx] = temp;
       }
       return nextList;
+    });
+    setObservationZones(prev => {
+      const nextZones = [...prev];
+      if (targetIdx >= 0 && targetIdx < nextZones.length) {
+        const temp = nextZones[index];
+        nextZones[index] = nextZones[targetIdx];
+        nextZones[targetIdx] = temp;
+      }
+      // Re-evaluate start/finish types for the new positions
+      if (nextZones.length > 0) {
+        nextZones[0] = { ...nextZones[0], type: 'Line', radius: 5000 };
+      }
+      if (nextZones.length > 1) {
+        nextZones[nextZones.length - 1] = { ...nextZones[nextZones.length - 1], type: 'Line', radius: 1000 };
+      }
+      // Re-evaluate any middle point that might have been a start/finish
+      for (let i = 1; i < nextZones.length - 1; i++) {
+        if (nextZones[i].type === 'Line') {
+          nextZones[i] = { ...nextZones[i], type: 'Cylinder', radius: 500 };
+        }
+      }
+      return nextZones;
     });
   };
 
@@ -172,19 +210,27 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                 legCalc = `${dist} NM @ ${heading}°`;
               }
               return (
-                <div key={index} className="waypoint-item-container">
+                <div key={index} className="waypoint-item-container" style={{ display: 'flex', flexDirection: 'column' }}>
                   {legCalc && (
                     <div className="leg-calculation-line">
                       <span>⬇️ {legCalc}</span>
                     </div>
                   )}
-                  <div className="waypoint-item">
+                  <div className="waypoint-item" style={{ borderBottomLeftRadius: expandedIndex === index ? '0' : '4px', borderBottomRightRadius: expandedIndex === index ? '0' : '4px' }}>
                     <span className="wp-index">{index + 1}</span>
                     <div className="wp-body">
                       <span className="wp-name" title={label}>{label}</span>
                       {getWaypointRoleBadge(index, waypoints.length)}
                     </div>
-                    <div className="wp-item-actions">
+                    <div className="wp-item-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <button 
+                        onClick={() => setExpandedIndex(prev => prev === index ? null : index)} 
+                        title="Configure Observation Zone"
+                        className="arrow-btn"
+                        style={{ color: expandedIndex === index ? 'var(--accent-color)' : 'inherit', border: expandedIndex === index ? '1px solid var(--accent-color)' : '1px solid transparent', borderRadius: '3px' }}
+                      >
+                        ⚙️
+                      </button>
                       <button 
                         disabled={index === 0} 
                         onClick={() => moveWaypoint(index, 'up')}
@@ -210,6 +256,89 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                       </button>
                     </div>
                   </div>
+
+                  {expandedIndex === index && (
+                    <div className="oz-config-panel" style={{ padding: '8px 12px', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderTop: 'none', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px', display: 'flex', flexDirection: 'column', gap: '8px', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>📐 Observation Zone Configuration</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'left' }}>Type</label>
+                          <select
+                            value={observationZones[index]?.type || 'Cylinder'}
+                            onChange={(e) => {
+                              const newType = e.target.value as any;
+                              setObservationZones(prev => {
+                                const next = [...prev];
+                                next[index] = {
+                                  ...next[index],
+                                  type: newType,
+                                  radius: newType === 'Line' ? (index === 0 ? 5000 : 1000) : (newType === 'Sector' ? 20000 : 500)
+                                };
+                                return next;
+                              });
+                            }}
+                            style={{ background: 'var(--bg-card)', color: 'inherit', border: '1px solid var(--border-color)', borderRadius: '3px', padding: '4px', fontSize: '11px', outline: 'none' }}
+                          >
+                            <option value="Cylinder">Cylinder (Barrel)</option>
+                            <option value="Sector">FAI Sector</option>
+                            <option value="Line">Start/Finish Line</option>
+                            <option value="Keyhole">Keyhole Sector</option>
+                          </select>
+                        </div>
+
+                        <div style={{ width: '85px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'left' }}>Radius (m)</label>
+                          <input
+                            type="number"
+                            min="100"
+                            max="100000"
+                            step="100"
+                            value={observationZones[index]?.radius || 500}
+                            onChange={(e) => {
+                              const newRadius = parseInt(e.target.value) || 100;
+                              setObservationZones(prev => {
+                                const next = [...prev];
+                                next[index] = {
+                                  ...next[index],
+                                  radius: newRadius
+                                };
+                                return next;
+                              });
+                            }}
+                            style={{ background: 'var(--bg-card)', color: 'inherit', border: '1px solid var(--border-color)', borderRadius: '3px', padding: '4px', fontSize: '11px', width: '100%', boxSizing: 'border-box', outline: 'none' }}
+                          />
+                        </div>
+
+                        {['Sector', 'Keyhole'].includes(observationZones[index]?.type) && (
+                          <div style={{ width: '65px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <label style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'left' }}>Angle (°)</label>
+                            <input
+                              type="number"
+                              min="10"
+                              max="360"
+                              step="5"
+                              value={observationZones[index]?.angle || 90}
+                              onChange={(e) => {
+                                const newAngle = parseInt(e.target.value) || 90;
+                                setObservationZones(prev => {
+                                  const next = [...prev];
+                                  next[index] = {
+                                    ...next[index],
+                                    angle: newAngle
+                                  };
+                                  return next;
+                                });
+                              }}
+                              style={{ background: 'var(--bg-card)', color: 'inherit', border: '1px solid var(--border-color)', borderRadius: '3px', padding: '4px', fontSize: '11px', width: '100%', boxSizing: 'border-box', outline: 'none' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -245,7 +374,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
                   <span>✅ Corridor is clear of active hazards.</span>
                 )}
               </div>
-              <TaskSynchronizer waypoints={waypoints} corridorNm={corridorNm} />
+              <TaskSynchronizer waypoints={waypoints} corridorNm={corridorNm} observationZones={observationZones} />
             </>
           )}
         </div>

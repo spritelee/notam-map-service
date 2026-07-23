@@ -38,6 +38,8 @@ interface SidebarProps {
   bgaTurnpoints: any;
   setWaypoints: React.Dispatch<React.SetStateAction<[number, number][]>>;
   routeHazardsCount: number;
+  observationZones: any[];
+  setObservationZones: React.Dispatch<React.SetStateAction<any[]>>;
 
   // Mobile layout props
   isMobile: boolean;
@@ -77,6 +79,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   bgaTurnpoints,
   setWaypoints,
   routeHazardsCount,
+  observationZones,
+  setObservationZones,
 
   isMobile,
   isMobileSidebarOpen,
@@ -191,6 +195,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               bgaTurnpoints={bgaTurnpoints}
               setWaypoints={setWaypoints}
               onActivateTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }))}
+              observationZones={observationZones}
+              setObservationZones={setObservationZones}
             />
 
             <UnplaceableDrawer 
@@ -240,6 +246,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 bgaTurnpoints={bgaTurnpoints}
                 setWaypoints={setWaypoints}
                 onActivateTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }))}
+                observationZones={observationZones}
+                setObservationZones={setObservationZones}
               />
             )}
 

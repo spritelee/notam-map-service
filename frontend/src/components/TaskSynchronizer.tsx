@@ -3,11 +3,16 @@ import React, { useState, useEffect } from 'react';
 interface TaskSynchronizerProps {
   waypoints: [number, number][]; // [lat, lng]
   corridorNm: number;
+  observationZones: {
+    type: 'Cylinder' | 'Sector' | 'Line' | 'Keyhole';
+    radius: number;
+    angle: number;
+  }[];
 }
 
 type TabType = 'weglide' | 'clouddrive' | 'share';
 
-export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, corridorNm }) => {
+export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, corridorNm, observationZones }) => {
   const [activeTab, setActiveTab] = useState<TabType>('weglide');
   const [loading, setLoading] = useState<boolean>(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -112,6 +117,7 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
           corridor_nm: corridorNm,
           provider: provider,
           access_token: accessToken || 'MOCK_TOKEN_12345',
+          observation_zones: observationZones,
           mock: cloudMock
         })
       });
@@ -122,7 +128,7 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
         if (data.logs) {
           setLogs(data.logs);
         } else {
-          setLogs(prev => [...prev, 'Task .cup file generated successfully.', 'Corridor-filtered NOTAM .openair airspace compiled.', 'Uploads completed.', 'Sync finished.']);
+          setLogs(prev => [...prev, 'Task .cup file generated successfully.', 'Corridor-filtered NOTAM .openair hazards compiled.', 'Uploads completed.', 'Sync finished.']);
         }
       } else {
         setSyncStatus({ success: false, message: data.detail || 'Cloud sync failed' });
@@ -149,7 +155,8 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           waypoints: lngLatWaypoints,
-          corridor_nm: corridorNm
+          corridor_nm: corridorNm,
+          observation_zones: observationZones
         })
       });
 
@@ -170,8 +177,8 @@ export const TaskSynchronizer: React.FC<TaskSynchronizerProps> = ({ waypoints, c
   };
 
   return (
-    <div className="task-synchronizer-container" style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-      <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold' }}>📡 Task & Airspace Synchronizer</h4>
+    <div className="task-synchronizer" style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+      <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold' }}>📡 Task & NOTAM Synchronizer</h4>
       
       {/* Tab Selectors */}
       <div className="sync-tabs" style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
