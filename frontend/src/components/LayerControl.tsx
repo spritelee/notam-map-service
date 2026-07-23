@@ -67,6 +67,17 @@ export const LayerControl: React.FC<LayerControlProps> = ({
 
   return (
     <div className="panel-section layer-control-panel">
+      <div className="unplaceable-badge-container" style={{ marginBottom: '14px' }}>
+        <button 
+          className={`unplaceable-filter-btn ${unplaceableCount > 0 ? 'warning' : 'all-clear'} ${showUnplaceableOnly ? 'active' : ''}`}
+          onClick={() => setShowUnplaceableOnly(!showUnplaceableOnly)}
+        >
+          {unplaceableCount > 0 
+            ? `⚠️ ${unplaceableCount} Unplaceable Notices ${showUnplaceableOnly ? '(Showing)' : '(Review)'}`
+            : `✅ All Placed (${unplaceableCount} Unplaceable)`}
+        </button>
+      </div>
+
       <div className="section-title">
         <span>🗂️ Aeronautical Hazard Layers</span>
       </div>
@@ -195,27 +206,6 @@ export const LayerControl: React.FC<LayerControlProps> = ({
           />
           <span>This Week</span>
         </label>
-      </div>
-
-      <div className="section-title" style={{ marginTop: '16px' }}>
-        <span>📍 Navigation References</span>
-      </div>
-      <div className="layer-grid">
-        <label className="layer-toggle green">
-          <input type="checkbox" checked={layers.bgaTurnpoints} onChange={() => toggleLayer('bgaTurnpoints')} />
-          <span>🟢 Show BGA Turnpoints (Official)</span>
-        </label>
-      </div>
-
-      <div className="unplaceable-badge-container" style={{ marginTop: '14px' }}>
-        <button 
-          className={`unplaceable-filter-btn ${unplaceableCount > 0 ? 'warning' : 'all-clear'} ${showUnplaceableOnly ? 'active' : ''}`}
-          onClick={() => setShowUnplaceableOnly(!showUnplaceableOnly)}
-        >
-          {unplaceableCount > 0 
-            ? `⚠️ ${unplaceableCount} Unplaceable Notices ${showUnplaceableOnly ? '(Showing)' : '(Review)'}`
-            : `✅ All Placed (${unplaceableCount} Unplaceable)`}
-        </button>
       </div>
     </div>
   );

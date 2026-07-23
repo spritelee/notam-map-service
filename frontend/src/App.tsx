@@ -475,8 +475,8 @@ function App() {
       {isMobile && !isMobileSidebarOpen && disclaimerState === 'accepted' && (
         <div className="mobile-header-bar">
           <div className="brand-container">
-            <img src="/favicon.png" alt="NOTAM Map Logo" className="header-logo" />
-            <span className="mobile-header-title">NOTAM Map Service</span>
+            <img src="/favicon.png" alt="NOTAM Radar Logo" className="header-logo" />
+            <span className="mobile-header-title">NOTAM Radar</span>
           </div>
           <button 
             className="mobile-header-menu-btn"
@@ -565,7 +565,7 @@ function App() {
 
       {isLoading && (
         <div className="loading-overlay">
-          <img src="/notam-icon.png" alt="NOTAM Map Logo" className="loading-logo" />
+          <img src="/notam-icon.png" alt="NOTAM Radar Logo" className="loading-logo" />
           <div className="spinner"></div>
           <p>Loading current NOTAMs...</p>
         </div>

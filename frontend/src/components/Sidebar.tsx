@@ -142,8 +142,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div className="brand-container">
-            <img src="/favicon.png" alt="NOTAM Map Logo" className="header-logo" />
-            <h1>NOTAM Map Service</h1>
+            <img src="/favicon.png" alt="NOTAM Radar Logo" className="header-logo" />
+            <h1>NOTAM Radar</h1>
           </div>
           {isMobile && (
             <button 
@@ -226,6 +226,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onActivateTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }))}
               observationZones={observationZones}
               setObservationZones={setObservationZones}
+              bgaTurnpointsActive={layers.bgaTurnpoints}
+              onToggleBgaTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: !prev.bgaTurnpoints }))}
             />
 
             <UnplaceableDrawer 
@@ -277,6 +279,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onActivateTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: true }))}
                 observationZones={observationZones}
                 setObservationZones={setObservationZones}
+                bgaTurnpointsActive={layers.bgaTurnpoints}
+                onToggleBgaTurnpoints={() => setLayers((prev: any) => ({ ...prev, bgaTurnpoints: !prev.bgaTurnpoints }))}
               />
             )}
 

@@ -121,6 +121,55 @@ body, html, #root {
   padding: 14px;
 }
 
+/* --- ROUTE & TASK PLANNER PANEL (BLUE ACCENT SHADING) --- */
+.route-planner-panel {
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.18) 0%, rgba(30, 58, 138, 0.35) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 4px 18px rgba(14, 165, 233, 0.15);
+  margin-top: 14px;
+}
+
+.route-planner-panel .section-title {
+  color: #38bdf8;
+  letter-spacing: 0.9px;
+}
+
+.bga-toggle-card {
+  margin-bottom: 12px;
+}
+
+.bga-turnpoint-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.bga-turnpoint-toggle-label:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.bga-turnpoint-toggle-label.active {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.bga-turnpoint-toggle-label input[type="checkbox"] {
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
 .section-title {
   font-size: 12px;
   font-weight: 700;

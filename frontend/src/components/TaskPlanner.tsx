@@ -14,6 +14,8 @@ interface TaskPlannerProps {
   onActivateTurnpoints?: () => void;
   observationZones: any[];
   setObservationZones: React.Dispatch<React.SetStateAction<any[]>>;
+  bgaTurnpointsActive?: boolean;
+  onToggleBgaTurnpoints?: () => void;
 }
 
 const getDistanceNM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -54,7 +56,9 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
   setWaypoints,
   onActivateTurnpoints,
   observationZones,
-  setObservationZones
+  setObservationZones,
+  bgaTurnpointsActive,
+  onToggleBgaTurnpoints
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -182,6 +186,17 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
     <div className="panel-section route-planner-panel">
       <div className="section-title">
         <span>🛰️ BGA Turnpoint Task Planner</span>
+      </div>
+
+      <div className="bga-toggle-card">
+        <label className={`bga-turnpoint-toggle-label ${bgaTurnpointsActive ? 'active' : ''}`}>
+          <input 
+            type="checkbox" 
+            checked={bgaTurnpointsActive || false} 
+            onChange={onToggleBgaTurnpoints} 
+          />
+          <span>🟢 Show BGA Turnpoints (Official)</span>
+        </label>
       </div>
 
       <div className="route-actions">
