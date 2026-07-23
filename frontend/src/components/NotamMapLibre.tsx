@@ -161,22 +161,23 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       const area = getFeatureAreaEstimate(f);
       const color = getHazardColor(type);
 
-      let fillOpacity = 0.12;
-      let fontWeight = 1.8;
+      // High-visibility opacity & stroke styling for WebGL GPU renderer
+      let fillOpacity = 0.20;
+      let strokeWidth = 2.5;
       let strokeColor = color;
 
       if (area > 0.04 || isQLineCoarse) {
-        fillOpacity = 0.03;
-        fontWeight = 1.2;
+        fillOpacity = 0.10;
+        strokeWidth = 2.0;
       } else if (area < 0.003) {
-        fillOpacity = 0.35;
-        fontWeight = 2.5;
+        fillOpacity = 0.45;
+        strokeWidth = 3.5;
       }
 
       if (isSelected) {
         strokeColor = '#ffffff';
-        fontWeight = 4;
-        fillOpacity = 0.6;
+        strokeWidth = 5.0;
+        fillOpacity = 0.70;
       }
 
       return {
@@ -186,7 +187,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
           fillColor: color,
           fillOpacity,
           strokeColor,
-          strokeWeight: fontWeight
+          strokeWeight: strokeWidth
         }
       };
     });
@@ -380,7 +381,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'notam-polygons',
       paint: {
         'fill-color': ['coalesce', ['get', 'fillColor'], '#38bdf8'],
-        'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0.15]
+        'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0.20]
       }
     });
 
@@ -391,7 +392,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'notam-polygons',
       paint: {
         'line-color': ['coalesce', ['get', 'strokeColor'], '#38bdf8'],
-        'line-width': ['coalesce', ['get', 'strokeWeight'], 2]
+        'line-width': ['coalesce', ['get', 'strokeWeight'], 2.5]
       }
     });
 
@@ -402,7 +403,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'route-corridor',
       paint: {
         'fill-color': '#00ffff',
-        'fill-opacity': 0.08
+        'fill-opacity': 0.15
       }
     });
 
@@ -412,7 +413,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'route-corridor',
       paint: {
         'line-color': '#00ffff',
-        'line-width': 1.5,
+        'line-width': 2.5,
         'line-dasharray': [4, 4]
       }
     });
@@ -424,7 +425,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'route-waypoints',
       paint: {
         'line-color': '#00ffff',
-        'line-width': 3,
+        'line-width': 4.0,
         'line-dasharray': [3, 3]
       }
     });
@@ -436,7 +437,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'observation-zones',
       paint: {
         'fill-color': '#00ffff',
-        'fill-opacity': 0.08
+        'fill-opacity': 0.15
       }
     });
 
@@ -446,7 +447,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
       source: 'observation-zones',
       paint: {
         'line-color': '#00ffff',
-        'line-width': 1.5
+        'line-width': 2.0
       }
     });
 
@@ -475,6 +476,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
     const source = map.getSource('notam-polygons') as maplibregl.GeoJSONSource;
     if (source) {
       source.setData(sortedGeoJSON as any);
+      map.triggerRepaint();
     }
   }, [sortedGeoJSON]);
 
@@ -486,6 +488,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
     const source = map.getSource('route-corridor') as maplibregl.GeoJSONSource;
     if (source && corridorGeoJSON) {
       source.setData(corridorGeoJSON);
+      map.triggerRepaint();
     } else if (source) {
       source.setData({ type: 'FeatureCollection', features: [] });
     }
@@ -506,6 +509,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
         },
         properties: {}
       } as any);
+      map.triggerRepaint();
     } else if (source) {
       source.setData({ type: 'FeatureCollection', features: [] });
     }
@@ -519,6 +523,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
     const source = map.getSource('observation-zones') as maplibregl.GeoJSONSource;
     if (source) {
       source.setData(ozGeoJSON as any);
+      map.triggerRepaint();
     }
   }, [ozGeoJSON]);
 
