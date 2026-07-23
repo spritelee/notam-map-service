@@ -1,8 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
 from backend.main import app, generate_cup_task, generate_tsk_task
-from backend.models import SharedTask
-from backend.database import get_db
 
 @pytest.fixture
 def client():

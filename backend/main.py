@@ -12,17 +12,15 @@ from fastapi import FastAPI, Query, HTTPException, Response, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from shapely.geometry import shape, LineString, mapping
-from sqlalchemy.future import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from shapely.strtree import STRtree
+from google.cloud import firestore
 
 from .services.pipeline import build_uk_geojson
 from .services.openair import geojson_to_openair
 from .services.sua import geojson_to_sua
 from .services.bga import get_bga_turnpoints
-from .database import engine, Base, get_db
-from .models import SharedTask
 
 logger = logging.getLogger(__name__)
 
@@ -31,34 +29,32 @@ app = FastAPI(
     description="Deterministic ingestion, layer filtering, and route corridor spatial analysis for UK NOTAMs"
 )
 
+db = None
+
 # Startup DB initialization
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Initializing database tables...")
-    async with engine.begin() as conn:
-        if engine.url.drivername.startswith("sqlite"):
-            # Only create the shared_tasks table for SQLite fallback (to avoid Geometry column compile error)
-            await conn.run_sync(SharedTask.__table__.create, checkfirst=True)
-        else:
-            await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database tables initialized successfully.")
+    logger.info("Initializing Firestore client...")
+    global db
+    db = firestore.AsyncClient()
+    logger.info("Firestore client initialized successfully.")
 
 
 # Pydantic models for Sync & Share
 class TaskShareRequest(BaseModel):
-    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
-    corridor_nm: float = 20.0
+    waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
+    corridor_nm: float = Field(20.0, le=100.0)
 
 class WeGlideSyncRequest(BaseModel):
-    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+    waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
     weglide_api_key: str
     pilot_dob: Optional[str] = None
-    task_name: Optional[str] = "NOTAM Workstation Task"
+    task_name: Optional[str] = Field("NOTAM Workstation Task", max_length=100)
     mock: bool = False
 
 class CloudDriveSyncRequest(BaseModel):
-    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
-    corridor_nm: float = 20.0
+    waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
+    corridor_nm: float = Field(20.0, le=100.0)
     provider: str # "google_drive" or "dropbox"
     access_token: str
     mock: bool = False
@@ -76,6 +72,9 @@ app.add_middleware(
 # In-memory cache for live UK NOTAM GeoJSON and BGA Turnpoints
 CACHE = {
     "data": None,
+    "strtree": None,
+    "geometries": None,
+    "feature_map": None,
     "timestamp": 0,
     "ttl_seconds": 900 # 15 minutes cache
 }
@@ -91,7 +90,25 @@ async def get_cached_notams() -> dict:
         logger.info("Fetching and parsing fresh live UK NATS NOTAM feed...")
         try:
             geojson_data = await build_uk_geojson()
+            
+            geometries = []
+            feature_map = {}
+            for feat in geojson_data["features"]:
+                geom_dict = feat.get("geometry")
+                if geom_dict:
+                    try:
+                        geom = shape(geom_dict)
+                        geometries.append(geom)
+                        feature_map[len(geometries) - 1] = feat
+                    except Exception:
+                        pass
+                        
+            strtree = STRtree(geometries) if geometries else None
+            
             CACHE["data"] = geojson_data
+            CACHE["strtree"] = strtree
+            CACHE["geometries"] = geometries
+            CACHE["feature_map"] = feature_map
             CACHE["timestamp"] = now
         except Exception as e:
             logger.error(f"Failed to fetch live NATS feed: {e}")
@@ -100,8 +117,8 @@ async def get_cached_notams() -> dict:
     return CACHE["data"]
 
 class RouteRequest(BaseModel):
-    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
-    corridor_nm: float = 20.0
+    waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
+    corridor_nm: float = Field(20.0, le=100.0)
     min_fl: Optional[int] = 0
     max_fl: Optional[int] = 100
 
@@ -128,10 +145,7 @@ async def filter_by_route(req: RouteRequest):
     """
     Performs spatial corridor buffering around a route and returns all intersecting NOTAMs.
     """
-    if len(req.waypoints) < 2:
-        raise HTTPException(status_code=400, detail="At least 2 waypoints are required for a route.")
-    
-    all_notams = await get_cached_notams()
+    await get_cached_notams()
     
     # 1 NM approx 0.016667 degrees
     buffer_deg = req.corridor_nm * 0.016667
@@ -141,27 +155,26 @@ async def filter_by_route(req: RouteRequest):
     intersecting_features = []
     unplaceable_features = []
     
-    for feat in all_notams["features"]:
-        props = feat.get("properties", {})
-        
-        # Apply Altitude Floor/Ceiling Filter
-        lower = props.get("lower_fl") or 0
-        upper = props.get("upper_fl") or 999
-        if upper < req.min_fl or lower > req.max_fl:
-            continue
-            
-        geom_dict = feat.get("geometry")
-        if not geom_dict:
-            # Unplaceable notices in the UK FIR are always included with warning flags!
+    for feat in CACHE["data"]["features"]:
+        if not feat.get("geometry"):
             unplaceable_features.append(feat)
-            continue
             
-        try:
-            geom_shapely = shape(geom_dict)
-            if geom_shapely.intersects(corridor_polygon):
+    if CACHE["strtree"] is not None:
+        query_indices = CACHE["strtree"].query(corridor_polygon)
+        # Shapely 2.0 query returns array of indices
+        for idx in query_indices:
+            idx = int(idx)
+            feat = CACHE["feature_map"][idx]
+            props = feat.get("properties", {})
+            
+            lower = props.get("lower_fl") or 0
+            upper = props.get("upper_fl") or 999
+            if upper < req.min_fl or lower > req.max_fl:
+                continue
+                
+            geom = CACHE["geometries"][idx]
+            if geom.intersects(corridor_polygon):
                 intersecting_features.append(feat)
-        except Exception:
-            unplaceable_features.append(feat)
             
     corridor_geojson = mapping(corridor_polygon)
     
@@ -200,7 +213,7 @@ async def export_sua(features: List[dict]):
     )
 
 class TaskExportRequest(BaseModel):
-    waypoints: List[List[float]] # [[lng, lat], [lng, lat], ...]
+    waypoints: List[List[float]] = Field(..., min_length=2, max_length=50) # [[lng, lat], [lng, lat], ...]
 
 def decimal_to_igc_coord(lat: float, lon: float) -> tuple[str, str]:
     # Latitude
@@ -349,26 +362,22 @@ def generate_share_id() -> str:
     return "".join(random.choice(chars) for _ in range(8))
 
 @app.post("/api/task/share")
-async def share_task(req: TaskShareRequest, db: AsyncSession = Depends(get_db)):
-    if len(req.waypoints) < 2:
-        raise HTTPException(status_code=400, detail="At least 2 waypoints are required to share a task.")
-    
+async def share_task(req: TaskShareRequest):
     for _ in range(10):
         share_id = generate_share_id()
-        stmt = select(SharedTask).where(SharedTask.id == share_id)
-        result = await db.execute(stmt)
-        if result.scalar_one_or_none() is None:
+        doc_ref = db.collection("shared_tasks").document(share_id)
+        doc = await doc_ref.get()
+        if not doc.exists:
             break
     else:
         raise HTTPException(status_code=500, detail="Failed to generate a unique share ID.")
 
-    shared = SharedTask(
-        id=share_id,
-        waypoints=json.dumps(req.waypoints),
-        corridor_nm=req.corridor_nm
-    )
-    db.add(shared)
-    await db.commit()
+    await doc_ref.set({
+        "id": share_id,
+        "waypoints": json.dumps(req.waypoints),
+        "corridor_nm": req.corridor_nm,
+        "created_at": firestore.SERVER_TIMESTAMP
+    })
     
     return {
         "share_id": share_id,
@@ -376,29 +385,29 @@ async def share_task(req: TaskShareRequest, db: AsyncSession = Depends(get_db)):
     }
 
 @app.get("/api/task/share/{share_id}")
-async def get_shared_task(share_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(SharedTask).where(SharedTask.id == share_id)
-    result = await db.execute(stmt)
-    shared = result.scalar_one_or_none()
-    if not shared:
+async def get_shared_task(share_id: str):
+    doc_ref = db.collection("shared_tasks").document(share_id)
+    doc = await doc_ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Shared task not found.")
     
+    shared = doc.to_dict()
     return {
-        "share_id": shared.id,
-        "waypoints": json.loads(shared.waypoints),
-        "corridor_nm": shared.corridor_nm,
-        "created_at": shared.created_at.isoformat()
+        "share_id": shared["id"],
+        "waypoints": json.loads(shared["waypoints"]),
+        "corridor_nm": shared["corridor_nm"],
+        "created_at": shared["created_at"].isoformat() if hasattr(shared["created_at"], "isoformat") else str(shared["created_at"])
     }
 
 @app.get("/api/task/share/{share_id}/cup")
-async def get_shared_task_cup(share_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(SharedTask).where(SharedTask.id == share_id)
-    result = await db.execute(stmt)
-    shared = result.scalar_one_or_none()
-    if not shared:
+async def get_shared_task_cup(share_id: str):
+    doc_ref = db.collection("shared_tasks").document(share_id)
+    doc = await doc_ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Shared task not found.")
     
-    waypoints = json.loads(shared.waypoints)
+    shared = doc.to_dict()
+    waypoints = json.loads(shared["waypoints"])
     if BGA_CACHE["data"] is None:
         BGA_CACHE["data"] = await get_bga_turnpoints()
     bga_features = BGA_CACHE["data"].get("features", [])
@@ -410,14 +419,14 @@ async def get_shared_task_cup(share_id: str, db: AsyncSession = Depends(get_db))
     )
 
 @app.get("/api/task/share/{share_id}/tsk")
-async def get_shared_task_tsk(share_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(SharedTask).where(SharedTask.id == share_id)
-    result = await db.execute(stmt)
-    shared = result.scalar_one_or_none()
-    if not shared:
+async def get_shared_task_tsk(share_id: str):
+    doc_ref = db.collection("shared_tasks").document(share_id)
+    doc = await doc_ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Shared task not found.")
     
-    waypoints = json.loads(shared.waypoints)
+    shared = doc.to_dict()
+    waypoints = json.loads(shared["waypoints"])
     if BGA_CACHE["data"] is None:
         BGA_CACHE["data"] = await get_bga_turnpoints()
     bga_features = BGA_CACHE["data"].get("features", [])
@@ -429,33 +438,31 @@ async def get_shared_task_tsk(share_id: str, db: AsyncSession = Depends(get_db))
     )
 
 @app.get("/api/task/share/{share_id}/openair")
-async def get_shared_task_openair(share_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(SharedTask).where(SharedTask.id == share_id)
-    result = await db.execute(stmt)
-    shared = result.scalar_one_or_none()
-    if not shared:
+async def get_shared_task_openair(share_id: str):
+    doc_ref = db.collection("shared_tasks").document(share_id)
+    doc = await doc_ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Shared task not found.")
     
-    waypoints = json.loads(shared.waypoints)
-    corridor_nm = shared.corridor_nm
+    shared = doc.to_dict()
+    waypoints = json.loads(shared["waypoints"])
+    corridor_nm = shared["corridor_nm"]
     
     buffer_deg = corridor_nm * 0.016667
     route_line = LineString(waypoints)
     corridor_polygon = route_line.buffer(buffer_deg)
     
-    all_notams = await get_cached_notams()
+    await get_cached_notams()
     
     intersecting_features = []
-    for feat in all_notams["features"]:
-        geom_dict = feat.get("geometry")
-        if not geom_dict:
-            continue
-        try:
-            geom_shapely = shape(geom_dict)
-            if geom_shapely.intersects(corridor_polygon):
+    if CACHE["strtree"] is not None:
+        query_indices = CACHE["strtree"].query(corridor_polygon)
+        for idx in query_indices:
+            idx = int(idx)
+            feat = CACHE["feature_map"][idx]
+            geom = CACHE["geometries"][idx]
+            if geom.intersects(corridor_polygon):
                 intersecting_features.append(feat)
-        except Exception:
-            continue
             
     openair_content = geojson_to_openair(intersecting_features)
     return PlainTextResponse(
@@ -546,18 +553,17 @@ async def sync_cloud_drive(req: CloudDriveSyncRequest):
     route_line = LineString(req.waypoints)
     corridor_polygon = route_line.buffer(buffer_deg)
     
-    all_notams = await get_cached_notams()
+    await get_cached_notams()
+    
     intersecting_features = []
-    for feat in all_notams["features"]:
-        geom_dict = feat.get("geometry")
-        if not geom_dict:
-            continue
-        try:
-            geom_shapely = shape(geom_dict)
-            if geom_shapely.intersects(corridor_polygon):
+    if CACHE["strtree"] is not None:
+        query_indices = CACHE["strtree"].query(corridor_polygon)
+        for idx in query_indices:
+            idx = int(idx)
+            feat = CACHE["feature_map"][idx]
+            geom = CACHE["geometries"][idx]
+            if geom.intersects(corridor_polygon):
                 intersecting_features.append(feat)
-        except Exception:
-            continue
             
     openair_content = geojson_to_openair(intersecting_features)
     

@@ -2,10 +2,7 @@ fastapi[standard]
 pydantic
 shapely
 geojson
-SQLAlchemy
-GeoAlchemy2
-asyncpg
-alembic
+google-cloud-firestore
 httpx
 # dev/test
 pytest
