@@ -134,6 +134,12 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const isMapLoadedRef = useRef<boolean>(false);
 
+  // Data refs to prevent race condition during initial async map load
+  const sortedGeoJSONRef = useRef<any>({ type: 'FeatureCollection', features: [] });
+  const corridorGeoJSONRef = useRef<any>(null);
+  const waypointsRef = useRef<[number, number][]>(waypoints);
+  const ozGeoJSONRef = useRef<any>({ type: 'FeatureCollection', features: [] });
+
   const isAlreadyClosed = useMemo(() => {
     if (waypoints.length < 2) return false;
     const start = waypoints[0];
@@ -141,140 +147,7 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
     return Math.abs(start[0] - end[0]) < 0.0001 && Math.abs(start[1] - end[1]) < 0.0001;
   }, [waypoints]);
 
-  // 1. Initialize MapLibre Map Instance
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: MAPLIBRE_DARK_STYLE,
-      center: [-1.2, 52.8],
-      zoom: 7
-    });
-
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-    map.on('load', () => {
-      isMapLoadedRef.current = true;
-      setupMapSourcesAndLayers(map);
-    });
-
-    mapRef.current = map;
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      isMapLoadedRef.current = false;
-    };
-  }, []);
-
-  // Setup static sources and vector layers
-  const setupMapSourcesAndLayers = (map: maplibregl.Map) => {
-    // Sources
-    map.addSource('notam-polygons', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addSource('route-corridor', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addSource('route-waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addSource('observation-zones', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-
-    // Layers
-    // NOTAM Polygons Fill Layer (WebGL hardware accelerated)
-    map.addLayer({
-      id: 'notam-polygons-fill',
-      type: 'fill',
-      source: 'notam-polygons',
-      filter: ['==', '$type', 'Polygon'],
-      paint: {
-        'fill-color': ['get', 'fillColor'],
-        'fill-opacity': ['get', 'fillOpacity']
-      }
-    });
-
-    // NOTAM Polygons Outline Line Layer
-    map.addLayer({
-      id: 'notam-polygons-outline',
-      type: 'line',
-      source: 'notam-polygons',
-      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'LineString']],
-      paint: {
-        'line-color': ['get', 'strokeColor'],
-        'line-width': ['get', 'strokeWeight']
-      }
-    });
-
-    // Route Corridor Layer
-    map.addLayer({
-      id: 'route-corridor-fill',
-      type: 'fill',
-      source: 'route-corridor',
-      paint: {
-        'fill-color': '#00ffff',
-        'fill-opacity': 0.08
-      }
-    });
-
-    map.addLayer({
-      id: 'route-corridor-outline',
-      type: 'line',
-      source: 'route-corridor',
-      paint: {
-        'line-color': '#00ffff',
-        'line-width': 1.5,
-        'line-dasharray': [4, 4]
-      }
-    });
-
-    // Planned Route Polyline
-    map.addLayer({
-      id: 'route-waypoints-line',
-      type: 'line',
-      source: 'route-waypoints',
-      paint: {
-        'line-color': '#00ffff',
-        'line-width': 3,
-        'line-dasharray': [3, 3]
-      }
-    });
-
-    // Observation Zones Layer
-    map.addLayer({
-      id: 'oz-fill',
-      type: 'fill',
-      source: 'observation-zones',
-      filter: ['==', '$type', 'Polygon'],
-      paint: {
-        'fill-color': '#00ffff',
-        'fill-opacity': 0.08
-      }
-    });
-
-    map.addLayer({
-      id: 'oz-outline',
-      type: 'line',
-      source: 'observation-zones',
-      paint: {
-        'line-color': '#00ffff',
-        'line-width': 1.5
-      }
-    });
-
-    // Handle NOTAM click selection on WebGL layer
-    map.on('click', 'notam-polygons-fill', (e: maplibregl.MapLayerMouseEvent) => {
-      if (e.features && e.features.length > 0) {
-        const feature = e.features[0];
-        onSelectNotam(feature);
-      }
-    });
-
-    map.on('mouseenter', 'notam-polygons-fill', () => {
-      map.getCanvas().style.cursor = 'pointer';
-    });
-
-    map.on('mouseleave', 'notam-polygons-fill', () => {
-      map.getCanvas().style.cursor = '';
-    });
-  };
-
-  // 2. Prepare Enriched NOTAM Data for WebGL Sources
+  // 1. Prepare Enriched NOTAM Data for WebGL Sources
   const sortedGeoJSON = useMemo(() => {
     if (!filteredData || !filteredData.features) return { type: 'FeatureCollection', features: [] };
     
@@ -320,50 +193,6 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
 
     return { type: 'FeatureCollection', features };
   }, [filteredData, selectedNotam]);
-
-  // Update NOTAM Vector Source when data or selection changes
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isMapLoadedRef.current) return;
-
-    const source = map.getSource('notam-polygons') as maplibregl.GeoJSONSource;
-    if (source) {
-      source.setData(sortedGeoJSON as any);
-    }
-  }, [sortedGeoJSON]);
-
-  // Update Route Corridor Source
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isMapLoadedRef.current) return;
-
-    const source = map.getSource('route-corridor') as maplibregl.GeoJSONSource;
-    if (source && corridorGeoJSON) {
-      source.setData(corridorGeoJSON);
-    } else if (source) {
-      source.setData({ type: 'FeatureCollection', features: [] });
-    }
-  }, [corridorGeoJSON]);
-
-  // Update Waypoints Polyline Line Source
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isMapLoadedRef.current) return;
-
-    const source = map.getSource('route-waypoints') as maplibregl.GeoJSONSource;
-    if (source && waypoints.length > 1) {
-      source.setData({
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: waypoints.map(wp => [wp[1], wp[0]]) // [lng, lat]
-        },
-        properties: {}
-      } as any);
-    } else if (source) {
-      source.setData({ type: 'FeatureCollection', features: [] });
-    }
-  }, [waypoints]);
 
   // Compute Observation Zone Polygons & Lines GeoJSON
   const ozGeoJSON = useMemo(() => {
@@ -466,6 +295,224 @@ export const NotamMapLibre: React.FC<NotamMapProps> = ({
 
     return { type: 'FeatureCollection', features };
   }, [waypoints, observationZones]);
+
+  // Keep data refs updated
+  useEffect(() => { sortedGeoJSONRef.current = sortedGeoJSON; }, [sortedGeoJSON]);
+  useEffect(() => { corridorGeoJSONRef.current = corridorGeoJSON; }, [corridorGeoJSON]);
+  useEffect(() => { waypointsRef.current = waypoints; }, [waypoints]);
+  useEffect(() => { ozGeoJSONRef.current = ozGeoJSON; }, [ozGeoJSON]);
+
+  const updateAllWebGlSources = (map: maplibregl.Map) => {
+    const notamSource = map.getSource('notam-polygons') as maplibregl.GeoJSONSource;
+    if (notamSource && sortedGeoJSONRef.current) {
+      notamSource.setData(sortedGeoJSONRef.current as any);
+    }
+
+    const corridorSource = map.getSource('route-corridor') as maplibregl.GeoJSONSource;
+    if (corridorSource) {
+      corridorSource.setData(corridorGeoJSONRef.current || { type: 'FeatureCollection', features: [] });
+    }
+
+    const waypointsSource = map.getSource('route-waypoints') as maplibregl.GeoJSONSource;
+    if (waypointsSource) {
+      if (waypointsRef.current.length > 1) {
+        waypointsSource.setData({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: waypointsRef.current.map(wp => [wp[1], wp[0]])
+          },
+          properties: {}
+        } as any);
+      } else {
+        waypointsSource.setData({ type: 'FeatureCollection', features: [] });
+      }
+    }
+
+    const ozSource = map.getSource('observation-zones') as maplibregl.GeoJSONSource;
+    if (ozSource && ozGeoJSONRef.current) {
+      ozSource.setData(ozGeoJSONRef.current as any);
+    }
+  };
+
+  // Initialize MapLibre Map Instance
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: MAPLIBRE_DARK_STYLE,
+      center: [-1.2, 52.8],
+      zoom: 7
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    map.on('load', () => {
+      isMapLoadedRef.current = true;
+      setupMapSourcesAndLayers(map);
+      updateAllWebGlSources(map);
+      map.resize();
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      isMapLoadedRef.current = false;
+    };
+  }, []);
+
+  // Setup static sources and vector layers
+  const setupMapSourcesAndLayers = (map: maplibregl.Map) => {
+    // Sources
+    map.addSource('notam-polygons', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addSource('route-corridor', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addSource('route-waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addSource('observation-zones', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+
+    // Layers
+    // NOTAM Polygons Fill Layer (WebGL hardware accelerated)
+    map.addLayer({
+      id: 'notam-polygons-fill',
+      type: 'fill',
+      source: 'notam-polygons',
+      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'MultiPolygon']],
+      paint: {
+        'fill-color': ['coalesce', ['get', 'fillColor'], '#38bdf8'],
+        'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0.15]
+      }
+    });
+
+    // NOTAM Polygons Outline Line Layer
+    map.addLayer({
+      id: 'notam-polygons-outline',
+      type: 'line',
+      source: 'notam-polygons',
+      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'MultiPolygon'], ['==', '$type', 'LineString']],
+      paint: {
+        'line-color': ['coalesce', ['get', 'strokeColor'], '#38bdf8'],
+        'line-width': ['coalesce', ['get', 'strokeWeight'], 2]
+      }
+    });
+
+    // Route Corridor Layer
+    map.addLayer({
+      id: 'route-corridor-fill',
+      type: 'fill',
+      source: 'route-corridor',
+      paint: {
+        'fill-color': '#00ffff',
+        'fill-opacity': 0.08
+      }
+    });
+
+    map.addLayer({
+      id: 'route-corridor-outline',
+      type: 'line',
+      source: 'route-corridor',
+      paint: {
+        'line-color': '#00ffff',
+        'line-width': 1.5,
+        'line-dasharray': [4, 4]
+      }
+    });
+
+    // Planned Route Polyline
+    map.addLayer({
+      id: 'route-waypoints-line',
+      type: 'line',
+      source: 'route-waypoints',
+      paint: {
+        'line-color': '#00ffff',
+        'line-width': 3,
+        'line-dasharray': [3, 3]
+      }
+    });
+
+    // Observation Zones Layer
+    map.addLayer({
+      id: 'oz-fill',
+      type: 'fill',
+      source: 'observation-zones',
+      filter: ['any', ['==', '$type', 'Polygon'], ['==', '$type', 'MultiPolygon']],
+      paint: {
+        'fill-color': '#00ffff',
+        'fill-opacity': 0.08
+      }
+    });
+
+    map.addLayer({
+      id: 'oz-outline',
+      type: 'line',
+      source: 'observation-zones',
+      paint: {
+        'line-color': '#00ffff',
+        'line-width': 1.5
+      }
+    });
+
+    // Handle NOTAM click selection on WebGL layer
+    map.on('click', 'notam-polygons-fill', (e: maplibregl.MapLayerMouseEvent) => {
+      if (e.features && e.features.length > 0) {
+        const feature = e.features[0];
+        onSelectNotam(feature);
+      }
+    });
+
+    map.on('mouseenter', 'notam-polygons-fill', () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'notam-polygons-fill', () => {
+      map.getCanvas().style.cursor = '';
+    });
+  };
+
+  // Update NOTAM Vector Source when data or selection changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoadedRef.current) return;
+
+    const source = map.getSource('notam-polygons') as maplibregl.GeoJSONSource;
+    if (source) {
+      source.setData(sortedGeoJSON as any);
+    }
+  }, [sortedGeoJSON]);
+
+  // Update Route Corridor Source
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoadedRef.current) return;
+
+    const source = map.getSource('route-corridor') as maplibregl.GeoJSONSource;
+    if (source && corridorGeoJSON) {
+      source.setData(corridorGeoJSON);
+    } else if (source) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+    }
+  }, [corridorGeoJSON]);
+
+  // Update Waypoints Polyline Line Source
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoadedRef.current) return;
+
+    const source = map.getSource('route-waypoints') as maplibregl.GeoJSONSource;
+    if (source && waypoints.length > 1) {
+      source.setData({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: waypoints.map(wp => [wp[1], wp[0]])
+        },
+        properties: {}
+      } as any);
+    } else if (source) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+    }
+  }, [waypoints]);
 
   // Update Observation Zone Source
   useEffect(() => {
