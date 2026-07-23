@@ -36,7 +36,7 @@ db = None
 async def startup_event():
     logger.info("Initializing Firestore client...")
     global db
-    db = firestore.AsyncClient()
+    db = firestore.AsyncClient(database="notam-map-service")
     logger.info("Firestore client initialized successfully.")
 
 
