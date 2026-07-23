@@ -203,6 +203,13 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
 
       {waypoints.length > 0 && (
         <div className="waypoints-summary" style={{ marginTop: '12px' }}>
+          {/* Task Summary Card */}
+          <div className="task-summary-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-hover)', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--border-color)', marginBottom: '12px' }}>
+            <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '500' }}>📏 Total Task Distance:</span>
+            <strong style={{ fontSize: '13px', color: 'var(--accent-color)' }}>
+              {totalDistance.toFixed(1)} NM / {(totalDistance * 1.852).toFixed(1)} km
+            </strong>
+          </div>
           {/* Waypoints List with Leg Calculations */}
           <div className="waypoints-list">
             {waypoints.map((wp, index) => {
