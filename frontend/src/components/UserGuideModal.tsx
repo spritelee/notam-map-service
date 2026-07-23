@@ -16,8 +16,15 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           <button className="modal-close-btn" onClick={onClose} aria-label="Close guide modal">✕</button>
         </div>
         <div className="modal-content">
-          <div className="guide-safety-warning">
-            <strong>⚠️ Flight Safety Notice:</strong> This visualization workstation is an unofficial tool and is <strong>NOT</strong> a replacement for an official aeronautical briefing. Always cross-reference your flight planning with the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
+          <div className="guide-safety-warning" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12px', lineHeight: '1.5' }}>
+            <strong>⚠️ UK Flight Safety Notice & Disclaimer:</strong>
+            <p style={{ margin: '4px 0 8px 0' }}>
+              This visualization workstation is an unofficial tool and is <strong>NOT</strong> a replacement for an official aeronautical briefing. Under the UK Air Navigation Order, the Pilot-in-Command (PIC) retains sole, non-delegable responsibility for the safe conduct of the flight. Always cross-reference your flight planning with the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
+            </p>
+            <strong>🔒 Safety Improvement - Unplaceable Notices:</strong>
+            <p style={{ margin: '4px 0 0 0' }}>
+              Unlike other platforms that silently omit notices without valid spatial coordinates, this tool isolates them in the <strong>Unplaceable Notices</strong> panel. You <strong>MUST</strong> check the Unplaceable list manually to ensure no critical hazards are missed.
+            </p>
           </div>
 
           <div className="guide-section">

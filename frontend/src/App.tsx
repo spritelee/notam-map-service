@@ -8,6 +8,11 @@ function App() {
   const [allNotams, setAllNotams] = useState<FeatureCollection | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Disclaimer State (Accepted state persists in localStorage)
+  const [disclaimerState, setDisclaimerState] = useState<'pending' | 'accepted' | 'rejected'>(() => {
+    return localStorage.getItem('notam_disclaimer_accepted') === 'true' ? 'accepted' : 'pending';
+  });
+
   // Responsive Layout States
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
@@ -547,6 +552,93 @@ function App() {
           <img src="/notam-icon.png" alt="NOTAM Map Logo" className="loading-logo" />
           <div className="spinner"></div>
           <p>Loading current NOTAMs...</p>
+        </div>
+      )}
+
+      {disclaimerState !== 'accepted' && (
+        <div className="disclaimer-overlay">
+          {disclaimerState === 'pending' ? (
+            <div className="disclaimer-card">
+              <div className="disclaimer-header">
+                <h2>⚠️ UK Flight Safety Notice & Terms</h2>
+              </div>
+              <div className="disclaimer-body">
+                <div className="disclaimer-notice-box">
+                  <strong>Non-Delegable Responsibility:</strong> Under the UK Air Navigation Order, the Pilot-in-Command (PIC) has sole, non-delegable responsibility for flight safety. This application is an unofficial visualization tool for supplemental situational awareness only and is <strong>NOT</strong> a replacement for an official pre-flight briefing. Always check the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
+                </div>
+                <div>
+                  <strong>🔒 Safety Enhancement - Unplaceable Notices:</strong> Many aviation apps silently discard NOTAMs that cannot be mapped due to coordinate errors. This tool isolates them under the <strong>Unplaceable Notices</strong> panel. You must review the Unplaceable list manually before flight to ensure no critical hazards are missed.
+                </div>
+                <div className="disclaimer-gdpr-box">
+                  <strong>🇪🇺 GDPR & Privacy Notice:</strong> This application does not use cookies for tracking, analytics, or marketing. We use your browser's local storage solely to retain your local task synchronizer credentials (API keys/tokens) so you don't have to re-enter them. This data stays entirely in your browser and is never sent to our servers.
+                </div>
+                <div>
+                  By clicking <strong>Accept and Continue</strong> below, you acknowledge and agree that you use this software at your own risk, that it is for supplemental use only, and that you will verify all information with official AIS sources.
+                </div>
+              </div>
+              <div className="disclaimer-status-bar">
+                <span style={{ color: '#94a3b8' }}>NOTAM Database Sync:</span>
+                {isLoading ? (
+                  <div className="status-indicator">
+                    <div className="status-spinner"></div>
+                    <span style={{ marginLeft: '6px' }}>Syncing NATS feed...</span>
+                  </div>
+                ) : (
+                  <div className="status-indicator ready">
+                    <span>✅ Feed Mapped in Background</span>
+                  </div>
+                )}
+              </div>
+              <div className="disclaimer-actions">
+                <button 
+                  className="disclaimer-btn reject" 
+                  onClick={() => setDisclaimerState('rejected')}
+                >
+                  Decline & Exit
+                </button>
+                <button 
+                  className="disclaimer-btn accept" 
+                  onClick={() => {
+                    localStorage.setItem('notam_disclaimer_accepted', 'true');
+                    setDisclaimerState('accepted');
+                  }}
+                >
+                  Accept & Continue
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="disclaimer-card" style={{ border: '1px solid #ef4444' }}>
+              <div className="disclaimer-header">
+                <h2 style={{ color: '#ef4444' }}>❌ Access Terminated</h2>
+              </div>
+              <div className="disclaimer-body">
+                <p>
+                  You have declined the safety agreement. As a safety-critical aviation tool, use of this application is strictly prohibited without accepting these terms.
+                </p>
+                <p>
+                  Please perform your pre-flight preparation using the official UK Aeronautical Information Service.
+                </p>
+              </div>
+              <div className="disclaimer-actions" style={{ flexDirection: 'column' }}>
+                <a 
+                  href="https://www.nats.aero/services/information-services/ais/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="disclaimer-btn primary-action"
+                  style={{ textDecoration: 'none' }}
+                >
+                  Go to NATS AIS Portal ↗
+                </a>
+                <button 
+                  className="disclaimer-btn reject" 
+                  onClick={() => setDisclaimerState('pending')}
+                >
+                  Review Safety Terms Again
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

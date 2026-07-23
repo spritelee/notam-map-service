@@ -111,6 +111,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </div>
   );
 
+  // Helper to render UK flight safety disclaimer
+  const renderDisclaimer = () => (
+    <div 
+      className="sidebar-disclaimer" 
+      style={{ 
+        marginTop: '16px', 
+        fontSize: '10.5px', 
+        opacity: 0.85, 
+        color: '#94a3b8', 
+        borderTop: '1px solid #334155', 
+        paddingTop: '12px', 
+        lineHeight: '1.4' 
+      }}
+    >
+      <div style={{ marginBottom: '4px', fontWeight: 'bold', color: '#f87171', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        ⚠️ UK Flight Safety Notice & Disclaimer
+      </div>
+      <div style={{ marginBottom: '6px' }}>
+        Unofficial tool for supplemental situational awareness only. Always verify all NOTAMs against the official <strong>NATS AIS Portal (PIB)</strong> before takeoff.
+      </div>
+      <div>
+        <strong>🔒 Safety Feature:</strong> Notices with invalid coordinates are isolated under the <em>Unplaceable</em> tab instead of being silently ignored. Check these manually.
+      </div>
+    </div>
+  );
+
   return (
     <div className={`sidebar ${isMobile ? 'mobile-drawer' : ''} ${isMobileSidebarOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
@@ -263,6 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
         )}
+        {renderDisclaimer()}
       </div>
     </div>
   );
