@@ -99,9 +99,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     try {
       const d = new Date(isoString);
       if (isNaN(d.getTime())) return null;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = d.getUTCDate();
+      const month = months[d.getUTCMonth()];
       const hh = String(d.getUTCHours()).padStart(2, '0');
       const mm = String(d.getUTCMinutes()).padStart(2, '0');
-      return `${hh}:${mm} UTC`;
+      return `${day} ${month} ${hh}:${mm} UTC`;
     } catch (e) {
       return null;
     }

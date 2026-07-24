@@ -202,7 +202,7 @@ export const TaskPlanner: React.FC<TaskPlannerProps> = ({
       <div className="route-actions">
         <span className="route-mode-text">
           {waypoints.length === 0 
-            ? '✏️ Add turnpoints to begin task planning' 
+            ? '✏️ Click on a turnpoint or search for turnpoints below to begin task planning' 
             : `📋 Task: ${waypoints.length} waypoints (${totalDistance.toFixed(1)} NM)`}
         </span>
         {waypoints.length > 0 && (
