@@ -79,12 +79,22 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
-        "https://notam.leestimmel.net"
+        "https://notamradar.org",
+        "https://www.notamradar.org",
+        "https://notam.leestimmel.net",
+        "https://notam.leestimmel.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_noindex_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
 
 RATE_LIMIT_CACHE = {}
 
